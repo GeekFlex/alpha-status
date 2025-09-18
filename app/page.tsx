@@ -488,13 +488,14 @@ export default function Page() {
       </header>
 
       {/* Hero */}
-      <div style={{ marginBottom: 24, display: "flex", justifyContent: "center" }}>
-        <picture>
-          <source srcSet="/alpha-hero.webp" type="image/webp" />
-          <source srcSet="/alpha-hero.png" type="image/png" />
-          <img src="/alpha-hero.png" alt="Alpha double-biceps hero" style={{ width: 340, height: "auto", filter: "drop-shadow(0 8px 16px rgba(0,0,0,0.15))" }} />
-        </picture>
-      </div>
+     {/* Hero */}
+<div style={{ marginBottom: 24, textAlign: "center" }}>
+  <img
+    src="/alpha-hero.png"
+    alt="Alpha double-biceps hero"
+    style={{ width: 340, height: "auto", filter: "drop-shadow(0 8px 16px rgba(0,0,0,0.15))" }}
+  />
+</div>
 
       {/* Auth or App */}
       {!currentEmail ? (
