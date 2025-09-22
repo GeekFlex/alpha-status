@@ -2,52 +2,65 @@
 import React, { useEffect, useMemo, useState } from "react";
 
 /** ========================
- * Minimal styles (inline)
+ * Rugged UI styles
  * ======================== */
 const box: React.CSSProperties = {
-  border: "1px solid #e5e7eb",
-  borderRadius: 12,
-  background: "#fff",
+  border: "1px solid rgba(30,41,59,0.3)",          // slate-ish border
+  borderRadius: 14,
+  background: "rgba(15,23,42,0.75)",               // dark glass
+  backdropFilter: "blur(4px)",
   padding: 16,
 };
 const inputStyle: React.CSSProperties = {
-  border: "1px solid #cbd5e1",
+  border: "1px solid rgba(148,163,184,0.35)",
   borderRadius: 8,
-  padding: "8px 12px",
+  padding: "10px 12px",
   fontSize: 14,
   width: "100%",
   boxSizing: "border-box",
+  background: "rgba(2,6,23,0.7)",
+  color: "#e2e8f0",
 };
 const buttonStyle: React.CSSProperties = {
-  borderRadius: 8,
-  padding: "8px 12px",
+  borderRadius: 10,
+  padding: "10px 14px",
   fontSize: 14,
   cursor: "pointer",
+  letterSpacing: 0.2,
 };
 const buttonPrimary: React.CSSProperties = {
   ...buttonStyle,
-  background: "#0f172a",
-  color: "white",
-  border: "1px solid #0f172a",
+  background: "linear-gradient(180deg, #1f2937, #111827)",
+  color: "#f8fafc",
+  border: "1px solid #111827",
+  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06)",
 };
 const buttonGhost: React.CSSProperties = {
   ...buttonStyle,
-  border: "1px solid #cbd5e1",
-  background: "white",
+  border: "1px solid rgba(148,163,184,0.35)",
+  background: "rgba(15,23,42,0.6)",
+  color: "#e5e7eb",
 };
-const labelText: React.CSSProperties = { fontSize: 12, color: "#334155", fontWeight: 600 };
-const helperText: React.CSSProperties = { fontSize: 11, color: "#64748b" };
+const labelText: React.CSSProperties = { fontSize: 12, color: "#cbd5e1", fontWeight: 700, letterSpacing: 0.3 };
+const helperText: React.CSSProperties = { fontSize: 11, color: "#94a3b8" };
 
 /** ========================
- * Helpers (hash, storage, images)
+ * Local storage / crypto helpers (client-only demo)
  * ======================== */
-const USERS_KEY = "alpha_status_users_v4";
+const USERS_KEY = "alpha_status_users_v5";
 
 async function sha256(text: string): Promise<string> {
   const enc = new TextEncoder().encode(text);
   const buf = await crypto.subtle.digest("SHA-256", enc);
   return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");
 }
+type UserRecord = {
+  passwordHash: string;
+  createdAt: number;
+  isAdmin?: boolean;
+  profile?: { name?: string; profilePhoto?: string; assessmentPhoto?: string };
+  answers?: Record<string, any>;
+};
 function loadUsers(): Record<string, UserRecord> {
   try {
     return JSON.parse(localStorage.getItem(USERS_KEY) || "{}");
@@ -68,16 +81,8 @@ async function fileToDataURL(file: File): Promise<string> {
 }
 
 /** ========================
- * Types
+ * Types for scoring config
  * ======================== */
-type UserRecord = {
-  passwordHash: string;
-  createdAt: number;
-  isAdmin?: boolean;
-  profile?: { name?: string; profilePhoto?: string; assessmentPhoto?: string };
-  answers?: Record<string, any>;
-};
-
 type Option = { label: string; value: number };
 type SelectFactor = { kind: "select"; id: string; label: string; weight: number; options: Option[] };
 type NumberFactor = {
@@ -101,80 +106,68 @@ type Factor = SelectFactor | NumberFactor | ChecklistFactor;
 type Config = { factors: Factor[] };
 
 /** ========================
- * Scoring config (weights)
+ * Scoring config (with updated member weights + new activities)
  * ======================== */
 const CFG: Config = {
   factors: [
     // Appearance (light)
     {
-      kind: "select",
-      id: "facial_hair",
-      label: "Facial Hair",
-      weight: 0.01,
+      kind: "select", id: "facial_hair", label: "Facial Hair", weight: 0.01,
       options: [
         { label: "Clean shaven", value: 50 },
-        { label: "Stubble", value: 70 },
+        { label: "Stubble",       value: 70 },
         { label: "Trimmed beard", value: 85 },
-        { label: "Full beard", value: 95 },
+        { label: "Full beard",    value: 95 },
       ],
     },
     {
-      kind: "select",
-      id: "chest_hair",
-      label: "Chest Hair",
-      weight: 0.01,
+      kind: "select", id: "chest_hair", label: "Chest Hair", weight: 0.01,
       options: [
-        { label: "None", value: 70 },
-        { label: "Light", value: 80 },
+        { label: "None",     value: 70 },
+        { label: "Light",    value: 80 },
         { label: "Moderate", value: 90 },
-        { label: "Thick", value: 95 },
+        { label: "Thick",    value: 95 },
       ],
     },
     {
-      kind: "select",
-      id: "calloused_hands",
-      label: "Calloused Hands",
-      weight: 0.01,
+      kind: "select", id: "calloused_hands", label: "Calloused Hands", weight: 0.01,
       options: [
-        { label: "Soft", value: 50 },
-        { label: "Some", value: 80 },
+        { label: "Soft",        value: 50 },
+        { label: "Some",        value: 80 },
         { label: "Well-earned", value: 95 },
       ],
     },
     {
-      kind: "select",
-      id: "hand_size",
-      label: "Hand Size",
-      weight: 0.02,
+      kind: "select", id: "hand_size", label: "Hand Size", weight: 0.02,
       options: [
-        { label: "Small", value: 50 },
-        { label: "Medium", value: 75 },
-        { label: "Large", value: 90 },
-        { label: "Extra Large", value: 100 },
+        { label: "Small",        value: 50 },
+        { label: "Medium",       value: 75 },
+        { label: "Large",        value: 90 },
+        { label: "Extra Large",  value: 100 },
       ],
     },
     { kind: "number", id: "shoe_size", label: "Shoe Size", unit: "US", weight: 0.02, domain: { min: 0, max: 20, better: "higher" } },
 
     // Anthropometrics
-    { kind: "number", id: "chest_size", label: "Chest size", unit: "in", weight: 0.03, domain: { min: 0, max: 70, better: "higher" } },
-    { kind: "number", id: "arm_size", label: "Arm size", unit: "in", weight: 0.03, domain: { min: 0, max: 30, better: "higher" } },
-    { kind: "number", id: "quad_size", label: "Quad size", unit: "in", weight: 0.03, domain: { min: 0, max: 40, better: "higher" } },
+    { kind: "number", id: "chest_size",    label: "Chest size",    unit: "in", weight: 0.03, domain: { min: 0, max: 70, better: "higher" } },
+    { kind: "number", id: "arm_size",      label: "Arm size",      unit: "in", weight: 0.03, domain: { min: 0, max: 30, better: "higher" } },
+    { kind: "number", id: "quad_size",     label: "Quad size",     unit: "in", weight: 0.03, domain: { min: 0, max: 40, better: "higher" } },
     { kind: "number", id: "shoulder_size", label: "Shoulder size", unit: "in", weight: 0.03, domain: { min: 0, max: 80, better: "higher" } },
-    { kind: "number", id: "height", label: "Height", unit: "in", weight: 0.02, domain: { min: 0, max: 100, better: "higher" } },
-    { kind: "number", id: "body_fat", label: "Body Fat %", unit: "%", weight: 0.03, domain: { min: 0, max: 60, better: "lower" } },
+    { kind: "number", id: "height",        label: "Height",        unit: "in", weight: 0.02, domain: { min: 0, max: 100, better: "higher" } },
+    { kind: "number", id: "body_fat",      label: "Body Fat %",    unit: "%",  weight: 0.03, domain: { min: 0, max: 60, better: "lower" } },
 
     // Max lifts (highest)
-    { kind: "number", id: "max_bench", label: "Max Bench Press", unit: "lb", weight: 0.12, domain: { min: 0, max: 1000, better: "higher" } },
-    { kind: "number", id: "max_deadlift", label: "Max Deadlift", unit: "lb", weight: 0.12, domain: { min: 0, max: 1000, better: "higher" } },
-    { kind: "number", id: "max_squat", label: "Max Squat", unit: "lb", weight: 0.12, domain: { min: 0, max: 1000, better: "higher" } },
+    { kind: "number", id: "max_bench",    label: "Max Bench Press", unit: "lb", weight: 0.12, domain: { min: 0, max: 1000, better: "higher" } },
+    { kind: "number", id: "max_deadlift", label: "Max Deadlift",    unit: "lb", weight: 0.12, domain: { min: 0, max: 1000, better: "higher" } },
+    { kind: "number", id: "max_squat",    label: "Max Squat",       unit: "lb", weight: 0.12, domain: { min: 0, max: 1000, better: "higher" } },
 
     // Conditioning + frequency
-    { kind: "number", id: "mile_time", label: "Fastest 1 mile (mm.ss)", unit: "min:sec", weight: 0.08, domain: { min: 0, max: 3600, better: "lower" } },
-    { kind: "number", id: "workout_days", label: "Workout Days per Week", unit: "days", weight: 0.05, domain: { min: 0, max: 7, better: "higher" } },
+    { kind: "number", id: "mile_time",    label: "Fastest 1 mile (mm.ss)", unit: "min:sec", weight: 0.08, domain: { min: 0, max: 3600, better: "lower" } },
+    { kind: "number", id: "workout_days", label: "Workout Days per Week",  unit: "days",    weight: 0.05, domain: { min: 0, max: 7,    better: "higher" } },
 
-    // Member sizes (next priority)
-    { kind: "number", id: "member_length", label: "Member Length", unit: "in", weight: 0.1, domain: { min: 0, max: 12, better: "higher" } },
-    { kind: "number", id: "member_girth", label: "Member Girth", unit: "in", weight: 0.08, domain: { min: 0, max: 8, better: "higher" } },
+    // Member sizes (heavier than before)
+    { kind: "number", id: "member_length", label: "Member Length", unit: "in", weight: 0.14, domain: { min: 0, max: 12, better: "higher" } },
+    { kind: "number", id: "member_girth",  label: "Member Girth",  unit: "in", weight: 0.10, domain: { min: 0, max: 8,  better: "higher" } },
 
     // Admin-assessed look
     { kind: "number", id: "alpha_look", label: "Alpha Look (admin rated)", unit: "/100", weight: 0.07, domain: { min: 0, max: 100, better: "higher" }, readOnly: true },
@@ -182,63 +175,49 @@ const CFG: Config = {
     // Misc
     { kind: "number", id: "hit_number", label: "Hit Number", unit: "#", weight: 0.02, domain: { min: 0, max: 500, better: "higher" } },
 
-    // Knowledge (1–10) (no handiness)
-    { kind: "number", id: "knowledge_street", label: "Knowledge — Street Smarts", unit: "/10", weight: 0.006, domain: { min: 1, max: 10, better: "higher" } },
-    { kind: "number", id: "knowledge_academics", label: "Knowledge — Academics", unit: "/10", weight: 0.006, domain: { min: 1, max: 10, better: "higher" } },
-    { kind: "number", id: "knowledge_sports", label: "Knowledge — Sports", unit: "/10", weight: 0.006, domain: { min: 1, max: 10, better: "higher" } },
-    { kind: "number", id: "knowledge_financial", label: "Knowledge — Financial", unit: "/10", weight: 0.006, domain: { min: 1, max: 10, better: "higher" } },
-    { kind: "number", id: "knowledge_strength", label: "Knowledge — Strength Training", unit: "/10", weight: 0.006, domain: { min: 1, max: 10, better: "higher" } },
-    { kind: "number", id: "knowledge_politics", label: "Knowledge — Politics", unit: "/10", weight: 0.006, domain: { min: 1, max: 10, better: "higher" } },
-    { kind: "number", id: "knowledge_travel", label: "Knowledge — World Travel", unit: "/10", weight: 0.006, domain: { min: 1, max: 10, better: "higher" } },
-    { kind: "number", id: "knowledge_survival", label: "Knowledge — Survival", unit: "/10", weight: 0.006, domain: { min: 1, max: 10, better: "higher" } },
-    { kind: "number", id: "knowledge_nutrition", label: "Knowledge — Nutrition", unit: "/10", weight: 0.006, domain: { min: 1, max: 10, better: "higher" } },
-    { kind: "number", id: "knowledge_first_aid", label: "Knowledge — First Aid", unit: "/10", weight: 0.006, domain: { min: 1, max: 10, better: "higher" } },
-    { kind: "number", id: "knowledge_mechanics", label: "Knowledge — Mechanics/Auto", unit: "/10", weight: 0.006, domain: { min: 1, max: 10, better: "higher" } },
+    // Knowledge (1–10)
+    { kind: "number", id: "knowledge_street",     label: "Knowledge — Street Smarts",      unit: "/10", weight: 0.006, domain: { min: 1, max: 10, better: "higher" } },
+    { kind: "number", id: "knowledge_academics",  label: "Knowledge — Academics",          unit: "/10", weight: 0.006, domain: { min: 1, max: 10, better: "higher" } },
+    { kind: "number", id: "knowledge_sports",     label: "Knowledge — Sports",             unit: "/10", weight: 0.006, domain: { min: 1, max: 10, better: "higher" } },
+    { kind: "number", id: "knowledge_financial",  label: "Knowledge — Financial",          unit: "/10", weight: 0.006, domain: { min: 1, max: 10, better: "higher" } },
+    { kind: "number", id: "knowledge_strength",   label: "Knowledge — Strength Training",  unit: "/10", weight: 0.006, domain: { min: 1, max: 10, better: "higher" } },
+    { kind: "number", id: "knowledge_politics",   label: "Knowledge — Politics",           unit: "/10", weight: 0.006, domain: { min: 1, max: 10, better: "higher" } },
+    { kind: "number", id: "knowledge_travel",     label: "Knowledge — World Travel",       unit: "/10", weight: 0.006, domain: { min: 1, max: 10, better: "higher" } },
+    { kind: "number", id: "knowledge_survival",   label: "Knowledge — Survival",           unit: "/10", weight: 0.006, domain: { min: 1, max: 10, better: "higher" } },
+    { kind: "number", id: "knowledge_nutrition",  label: "Knowledge — Nutrition",          unit: "/10", weight: 0.006, domain: { min: 1, max: 10, better: "higher" } },
+    { kind: "number", id: "knowledge_first_aid",  label: "Knowledge — First Aid",          unit: "/10", weight: 0.006, domain: { min: 1, max: 10, better: "higher" } },
+    { kind: "number", id: "knowledge_mechanics",  label: "Knowledge — Mechanics/Auto",     unit: "/10", weight: 0.006, domain: { min: 1, max: 10, better: "higher" } },
     { kind: "number", id: "knowledge_navigation", label: "Knowledge — Navigation/Orienteering", unit: "/10", weight: 0.006, domain: { min: 1, max: 10, better: "higher" } },
-    { kind: "number", id: "knowledge_cooking", label: "Knowledge — Cooking", unit: "/10", weight: 0.006, domain: { min: 1, max: 10, better: "higher" } },
-    { kind: "number", id: "knowledge_home_repair", label: "Knowledge — Home Repair/DIY", unit: "/10", weight: 0.006, domain: { min: 1, max: 10, better: "higher" } },
-    { kind: "number", id: "knowledge_leadership", label: "Knowledge — Leadership", unit: "/10", weight: 0.006, domain: { min: 1, max: 10, better: "higher" } },
-    { kind: "number", id: "knowledge_tech", label: "Knowledge — Tech/Coding", unit: "/10", weight: 0.006, domain: { min: 1, max: 10, better: "higher" } },
+    { kind: "number", id: "knowledge_cooking",    label: "Knowledge — Cooking",            unit: "/10", weight: 0.006, domain: { min: 1, max: 10, better: "higher" } },
+    { kind: "number", id: "knowledge_home_repair",label: "Knowledge — Home Repair/DIY",    unit: "/10", weight: 0.006, domain: { min: 1, max: 10, better: "higher" } },
+    { kind: "number", id: "knowledge_leadership", label: "Knowledge — Leadership",         unit: "/10", weight: 0.006, domain: { min: 1, max: 10, better: "higher" } },
+    { kind: "number", id: "knowledge_tech",       label: "Knowledge — Tech/Coding",        unit: "/10", weight: 0.006, domain: { min: 1, max: 10, better: "higher" } },
 
-    // Activities
+    // Activities (added Fire building, Fishing, Baby Making)
     {
-      kind: "checklist",
-      id: "activities",
-      label: "Activities completed",
-      weight: 0.1,
-      cap: 100,
+      kind: "checklist", id: "activities", label: "Activities completed", weight: 0.1, cap: 100,
       items: [
-        { id: "hyrox", label: "HYROX", points: 20 },
-        { id: "spartan", label: "Spartan", points: 15 },
-        { id: "marathon", label: "Marathon", points: 20 },
-        { id: "triathlon", label: "Triathlon", points: 20 },
-        { id: "murph", label: "Murph", points: 15 },
-        { id: "tough_mudder", label: "Tough Mudder", points: 15 },
-        { id: "rock_climb", label: "Rock climbing", points: 10 },
-        { id: "snowmobiling", label: "Snowmobiling", points: 5 },
-        { id: "surfing", label: "Surfing", points: 10 },
-        { id: "skiing", label: "Skiing", points: 10 },
-        { id: "snowboarding", label: "Snowboarding", points: 10 },
-        { id: "wakeboarding", label: "Wakeboarding", points: 10 },
-        { id: "waterskiing", label: "Water skiing", points: 10 },
-        { id: "jetski", label: "Jet skiing", points: 5 },
-        { id: "shotgun", label: "Shotgun a beer", points: 5 },
-        { id: "chopwood", label: "Chop wood", points: 5 },
-        { id: "bjj", label: "BJJ", points: 15 },
-        { id: "wrestling", label: "Wrestling", points: 15 },
-        { id: "golfing", label: "Golfing", points: 5 },
-        { id: "boxing", label: "Boxing", points: 15 },
-        { id: "winfight", label: "Winning a fight", points: 20 },
-        { id: "shootgun", label: "Shooting a gun", points: 10 },
-        { id: "shootbow", label: "Shooting a bow and arrow", points: 10 },
-        { id: "hiking", label: "Hiking", points: 5 },
-        { id: "hockey", label: "Hockey", points: 10 },
-        { id: "lacrosse", label: "Lacrosse", points: 10 },
-        { id: "rugby", label: "Rugby", points: 15 },
-        { id: "volleyball", label: "Volleyball", points: 5 },
-        { id: "powerlifting_meet", label: "Powerlifting meet", points: 20 },
-        { id: "football", label: "Football", points: 15 },
+        { id: "hyrox", label: "HYROX", points: 20 }, { id: "spartan", label: "Spartan", points: 15 },
+        { id: "marathon", label: "Marathon", points: 20 }, { id: "triathlon", label: "Triathlon", points: 20 },
+        { id: "murph", label: "Murph", points: 15 }, { id: "tough_mudder", label: "Tough Mudder", points: 15 },
+        { id: "rock_climb", label: "Rock climbing", points: 10 }, { id: "snowmobiling", label: "Snowmobiling", points: 5 },
+        { id: "surfing", label: "Surfing", points: 10 }, { id: "skiing", label: "Skiing", points: 10 },
+        { id: "snowboarding", label: "Snowboarding", points: 10 }, { id: "wakeboarding", label: "Wakeboarding", points: 10 },
+        { id: "waterskiing", label: "Water skiing", points: 10 }, { id: "jetski", label: "Jet skiing", points: 5 },
+        { id: "shotgun", label: "Shotgun a beer", points: 5 }, { id: "chopwood", label: "Chop wood", points: 5 },
+        { id: "bjj", label: "BJJ", points: 15 }, { id: "wrestling", label: "Wrestling", points: 15 },
+        { id: "golfing", label: "Golfing", points: 5 }, { id: "boxing", label: "Boxing", points: 15 },
+        { id: "winfight", label: "Winning a fight", points: 20 }, { id: "shootgun", label: "Shooting a gun", points: 10 },
+        { id: "shootbow", label: "Shooting a bow and arrow", points: 10 }, { id: "hiking", label: "Hiking", points: 5 },
+        { id: "hockey", label: "Hockey", points: 10 }, { id: "lacrosse", label: "Lacrosse", points: 10 },
+        { id: "rugby", label: "Rugby", points: 15 }, { id: "volleyball", label: "Volleyball", points: 5 },
+        { id: "powerlifting_meet", label: "Powerlifting meet", points: 20 }, { id: "football", label: "Football", points: 15 },
         { id: "motocross", label: "Motocross", points: 15 },
+
+        // new ones
+        { id: "fire_building", label: "Fire building", points: 10 },
+        { id: "fishing",       label: "Fishing",       points: 8  },
+        { id: "baby_making",   label: "Baby Making",   points: 5  },
       ],
     },
   ],
@@ -247,9 +226,7 @@ const CFG: Config = {
 /** ========================
  * Scoring helpers
  * ======================== */
-function clamp01(n: number) {
-  return Math.max(0, Math.min(1, n));
-}
+function clamp01(n: number) { return Math.max(0, Math.min(1, n)); }
 function pctHigher(v: number, min: number, max: number) {
   const t = (v - min) / (max - min);
   return Math.round(clamp01(t) * 100);
@@ -274,6 +251,31 @@ function levelFor(score1000: number) {
   return { name: "Getting Started", blurb: "Stack small wins." };
 }
 
+/** Compute score from arbitrary answers (for leaderboard) */
+function scoreFromAnswers(answers: Record<string, any>) {
+  const raw: Record<string, number> = {};
+  CFG.factors.forEach((f) => {
+    if (f.kind === "number") {
+      const vRaw = answers[f.id];
+      const v = f.id === "mile_time" ? parseMileToSeconds(vRaw) : parseFloat(vRaw);
+      if (!Number.isFinite(v)) { raw[f.id] = 0; return; }
+      const clamped = Math.max(f.domain.min, Math.min(f.domain.max, v));
+      raw[f.id] = f.domain.better === "higher" ? pctHigher(clamped, f.domain.min, f.domain.max) : pctLower(clamped, f.domain.min, f.domain.max);
+    } else if (f.kind === "select") {
+      const v = Number(answers[f.id] ?? NaN);
+      raw[f.id] = Number.isFinite(v) ? Math.max(0, Math.min(100, v)) : 0;
+    } else if (f.kind === "checklist") {
+      const set = (answers[f.id] as Record<string, boolean>) || {};
+      const total = f.items.reduce((sum, it) => sum + (set[it.id] ? it.points : 0), 0);
+      const cap = f.cap ?? 100;
+      raw[f.id] = Math.round(Math.max(0, Math.min(1, total / cap)) * 100);
+    }
+  });
+  const totalW = CFG.factors.reduce((s, f) => s + f.weight, 0);
+  const weighted = CFG.factors.reduce((s, f) => s + (raw[f.id] ?? 0) * f.weight, 0);
+  return Math.round((weighted / (totalW || 1)) * 10);
+}
+
 /** ========================
  * Page Component
  * ======================== */
@@ -295,12 +297,9 @@ export default function Page() {
   const [assessmentPhoto, setAssessmentPhoto] = useState<string | undefined>();
   const [answers, setAnswers] = useState<Record<string, any>>({});
 
-  // Load users on mount
-  useEffect(() => {
-    setUsers(loadUsers());
-  }, []);
-
-  // When switching users, load profile into local state
+  // Load users
+  useEffect(() => { setUsers(loadUsers()); }, []);
+  // When switching users, load profile
   useEffect(() => {
     if (currentUser?.profile) {
       setName(currentUser.profile.name || "");
@@ -309,23 +308,17 @@ export default function Page() {
       setAnswers(currentUser.answers || {});
     }
   }, [currentEmail]);
+  // Persist users
+  useEffect(() => { saveUsers(users); }, [users]);
 
-  // Persist users whenever they change
-  useEffect(() => {
-    saveUsers(users);
-  }, [users]);
-
-  // Scoring
+  // Per-user score
   const { score1000, level } = useMemo(() => {
     const raw: Record<string, number> = {};
     CFG.factors.forEach((f) => {
       if (f.kind === "number") {
         const vRaw = answers[f.id];
         const v = f.id === "mile_time" ? parseMileToSeconds(vRaw) : parseFloat(vRaw);
-        if (!Number.isFinite(v)) {
-          raw[f.id] = 0;
-          return;
-        }
+        if (!Number.isFinite(v)) { raw[f.id] = 0; return; }
         const clamped = Math.max(f.domain.min, Math.min(f.domain.max, v));
         raw[f.id] = f.domain.better === "higher" ? pctHigher(clamped, f.domain.min, f.domain.max) : pctLower(clamped, f.domain.min, f.domain.max);
       } else if (f.kind === "select") {
@@ -338,14 +331,27 @@ export default function Page() {
         raw[f.id] = Math.round(Math.max(0, Math.min(1, total / cap)) * 100);
       }
     });
-
     const totalW = CFG.factors.reduce((s, f) => s + f.weight, 0);
     const weighted = CFG.factors.reduce((sum, f) => sum + (raw[f.id] ?? 0) * f.weight, 0);
     const s1000 = Math.round((weighted / (totalW || 1)) * 10);
     return { score1000: s1000, level: levelFor(s1000) };
   }, [answers]);
 
-  // Actions
+  // Leaderboard (all users)
+  const leaderboard = useMemo(() => {
+    return Object.entries(users).map(([email, u]) => {
+      const ans = u.answers || {};
+      const score = scoreFromAnswers(ans);
+      return {
+        email,
+        name: u.profile?.name || email,
+        photo: u.profile?.profilePhoto,
+        score,
+      };
+    }).sort((a, b) => b.score - a.score);
+  }, [users]);
+
+  // Auth actions
   async function handleAuth() {
     if (!email || !pwd) return alert("Enter email and password.");
     const pwdHash = await sha256(pwd);
@@ -363,7 +369,6 @@ export default function Page() {
       setCurrentEmail(email);
     }
   }
-
   function handleLogout() {
     setCurrentEmail(null);
     setAnswers({});
@@ -371,7 +376,6 @@ export default function Page() {
     setProfilePhoto(undefined);
     setAssessmentPhoto(undefined);
   }
-
   function handleSaveProfile() {
     if (!currentEmail) return;
     setUsers((prev) => ({
@@ -384,7 +388,6 @@ export default function Page() {
       },
     }));
   }
-
   function exportCSV() {
     const us = loadUsers();
     const factorIds = CFG.factors.map((f) => f.id);
@@ -396,10 +399,7 @@ export default function Page() {
       const factorVals = factorIds.map((id) => {
         const fv: any = u.answers?.[id];
         if (fv && typeof fv === "object") {
-          return Object.entries(fv)
-            .filter(([, v]) => !!v)
-            .map(([k]) => k)
-            .join(";");
+          return Object.entries(fv).filter(([, v]) => !!v).map(([k]) => k).join(";");
         }
         return typeof fv === "undefined" ? "" : String(fv);
       });
@@ -428,22 +428,35 @@ export default function Page() {
     URL.revokeObjectURL(url);
   }
 
-  /** Reusable input */
-  function NumberInput(props: { value: any; onChange: (v: string) => void; min: number; max: number; step?: number; unit?: string; disabled?: boolean }) {
-    const { value, onChange, min, max, step = 0.5, unit, disabled } = props;
+  /** Reusable number input with focus-friendly typing */
+  function NumberInput({
+    value, onChange, min, max, step = 0.5, unit, disabled,
+  }: { value: any; onChange: (v: string) => void; min: number; max: number; step?: number; unit?: string; disabled?: boolean; }) {
+    const [text, setText] = useState<string>("");
+
+    // sync when parent value changes (reset/load)
+    useEffect(() => { setText(value ?? ""); }, [value]);
+
+    function commit(raw: string) {
+      const v = parseFloat(raw);
+      if (Number.isFinite(v)) {
+        const clamped = Math.max(min, Math.min(max, v));
+        setText(String(clamped));
+        onChange(String(clamped));
+      } else {
+        setText("");
+        onChange("");
+      }
+    }
+
     return (
       <div>
         <input
           type="number"
-          value={value ?? ""}
-          onChange={(e) => onChange(e.target.value)}
-          onBlur={(e) => {
-            const v = parseFloat(e.target.value);
-            if (Number.isFinite(v)) {
-              const clamped = Math.max(min, Math.min(max, v));
-              if (clamped !== v) onChange(String(clamped));
-            }
-          }}
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          onBlur={(e) => commit(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
           min={min}
           max={max}
           step={step}
@@ -457,17 +470,35 @@ export default function Page() {
 
   /** UI */
   return (
-    <main style={{ maxWidth: 1000, margin: "0 auto", padding: 24, fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif", color: "#0f172a" }}>
+    <main style={{
+      maxWidth: 1100, margin: "0 auto", padding: 24,
+      fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif",
+      color: "#e5e7eb", position: "relative", zIndex: 1
+    }}>
+      {/* === Full-page background layers === */}
+      <div style={{
+        position: "fixed", inset: 0,
+        backgroundImage: "url('/alpha-hero.png')",
+        backgroundSize: "cover", backgroundPosition: "center top",
+        filter: "grayscale(15%) contrast(1.05)", opacity: 0.25, zIndex: 0
+      }} />
+      <div style={{
+        position: "fixed", inset: 0,
+        background: `
+          radial-gradient(1200px 600px at 70% -10%, rgba(0,0,0,0.6), transparent),
+          linear-gradient(to bottom, rgba(2,6,23,0.85), rgba(2,6,23,0.35)),
+          repeating-linear-gradient(135deg, rgba(255,255,255,0.03) 0, rgba(255,255,255,0.03) 2px, rgba(0,0,0,0.0) 2px, rgba(0,0,0,0.0) 6px)
+        `,
+        zIndex: 0
+      }} />
+
       {/* Header */}
       <header style={{ marginBottom: 16, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div>
-          <h1 style={{ fontSize: 28, fontWeight: 800, margin: 0 }}>Alpha Status</h1>
-          <div style={{ fontSize: 13, color: "#475569", marginTop: 4 }}>
+          <h1 style={{ fontSize: 32, fontWeight: 900, margin: 0, color: "#f1f5f9", letterSpacing: 0.4 }}>Alpha Status</h1>
+          <div style={{ fontSize: 13, color: "#cbd5e1", marginTop: 4 }}>
             {currentEmail ? (
-              <>
-                Signed in as <b>{currentEmail}</b>
-                {isAdmin ? " • Admin" : ""}
-              </>
+              <>Signed in as <b>{currentEmail}</b>{isAdmin ? " • Admin" : ""}</>
             ) : (
               "Sign in or create an account to begin."
             )}
@@ -475,45 +506,18 @@ export default function Page() {
         </div>
         {currentEmail && (
           <div style={{ display: "flex", gap: 8 }}>
-            {isAdmin && (
-              <button onClick={exportCSV} style={buttonGhost}>
-                Export CSV
-              </button>
-            )}
-            <button onClick={handleLogout} style={buttonGhost}>
-              Sign Out
-            </button>
+            <button onClick={exportCSV} style={buttonGhost}>Export CSV</button>
+            <button onClick={handleLogout} style={buttonGhost}>Sign Out</button>
           </div>
         )}
       </header>
 
-      {/* Hero */}
-     {/* Hero */}
-<div style={{ marginBottom: 24, textAlign: "center" }}>
-  <img
-    src="/alpha-hero.png"
-    alt="Alpha double-biceps hero"
-    style={{ width: 340, height: "auto", filter: "drop-shadow(0 8px 16px rgba(0,0,0,0.15))" }}
-  />
-</div>
-
       {/* Auth or App */}
       {!currentEmail ? (
         <div style={{ ...box, display: "grid", gap: 12 }}>
-          {/* Mode toggle */}
           <div style={{ display: "flex", gap: 8 }}>
-            <button
-              style={{ ...buttonStyle, ...(isLoginMode ? buttonPrimary : buttonGhost) }}
-              onClick={() => setIsLoginMode(true)}
-            >
-              Login
-            </button>
-            <button
-              style={{ ...buttonStyle, ...(!isLoginMode ? buttonPrimary : buttonGhost) }}
-              onClick={() => setIsLoginMode(false)}
-            >
-              Create Account
-            </button>
+            <button style={{ ...buttonStyle, ...(isLoginMode ? buttonPrimary : buttonGhost) }} onClick={() => setIsLoginMode(true)}>Login</button>
+            <button style={{ ...buttonStyle, ...(!isLoginMode ? buttonPrimary : buttonGhost) }} onClick={() => setIsLoginMode(false)}>Create Account</button>
           </div>
 
           <label>
@@ -545,7 +549,7 @@ export default function Page() {
           {/* Profile & Preview */}
           <div style={{ display: "grid", gap: 16, gridTemplateColumns: "1fr 1fr 1fr", marginBottom: 16 }}>
             <div style={{ ...box, gridColumn: "span 2" }}>
-              <h2 style={{ margin: 0, marginBottom: 12, fontSize: 18, fontWeight: 700 }}>Profile</h2>
+              <h2 style={{ margin: 0, marginBottom: 12, fontSize: 18, fontWeight: 700, color: "#e2e8f0" }}>Profile</h2>
               <div style={{ display: "grid", gap: 12, gridTemplateColumns: "1fr 1fr" }}>
                 <label style={{ display: "grid", gap: 6 }}>
                   <div style={labelText}>Name</div>
@@ -564,16 +568,16 @@ export default function Page() {
             </div>
 
             <div style={box}>
-              <h2 style={{ margin: 0, marginBottom: 12, fontSize: 18, fontWeight: 700 }}>Preview</h2>
+              <h2 style={{ margin: 0, marginBottom: 12, fontSize: 18, fontWeight: 700, color: "#e2e8f0" }}>Preview</h2>
               <div style={{ display: "grid", gap: 8 }}>
-                <div style={{ height: 160, borderRadius: 12, overflow: "hidden", background: "#f8fafc", border: "1px solid #e2e8f0", display: "grid", placeItems: "center" }}>
-                  {profilePhoto ? <img src={profilePhoto} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ fontSize: 12, color: "#64748b" }}>No profile photo</span>}
+                <div style={{ height: 160, borderRadius: 12, overflow: "hidden", background: "rgba(2,6,23,0.6)", border: "1px solid rgba(148,163,184,0.3)", display: "grid", placeItems: "center" }}>
+                  {profilePhoto ? <img src={profilePhoto} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ fontSize: 12, color: "#94a3b8" }}>No profile photo</span>}
                 </div>
-                <div style={{ fontSize: 14, fontWeight: 600 }}>{name || "Unnamed"}</div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: "#f8fafc" }}>{name || "Unnamed"}</div>
                 <div>
                   <div style={{ ...helperText, marginBottom: 6 }}>Assessment photo</div>
-                  <div style={{ height: 140, borderRadius: 12, overflow: "hidden", background: "#f8fafc", border: "1px solid #e2e8f0", display: "grid", placeItems: "center" }}>
-                    {assessmentPhoto ? <img src={assessmentPhoto} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ fontSize: 12, color: "#64748b" }}>Upload a waist-up assessment photo</span>}
+                  <div style={{ height: 140, borderRadius: 12, overflow: "hidden", background: "rgba(2,6,23,0.6)", border: "1px solid rgba(148,163,184,0.3)", display: "grid", placeItems: "center" }}>
+                    {assessmentPhoto ? <img src={assessmentPhoto} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ fontSize: 12, color: "#94a3b8" }}>Upload a waist-up assessment photo</span>}
                   </div>
                 </div>
               </div>
@@ -587,8 +591,8 @@ export default function Page() {
               <div style={{ marginTop: 12, display: "grid", gap: 12 }}>
                 {[
                   { id: "max_bench", label: "Max Bench Press", min: 0, max: 1000, unit: "lb" },
-                  { id: "max_deadlift", label: "Max Deadlift", min: 0, max: 1000, unit: "lb" },
-                  { id: "max_squat", label: "Max Squat", min: 0, max: 1000, unit: "lb" },
+                  { id: "max_deadlift", label: "Max Deadlift",   min: 0, max: 1000, unit: "lb" },
+                  { id: "max_squat", label: "Max Squat",         min: 0, max: 1000, unit: "lb" },
                 ].map((f) => (
                   <label key={f.id}>
                     <div style={labelText}>{f.label}</div>
@@ -603,7 +607,7 @@ export default function Page() {
               <div style={{ marginTop: 12, display: "grid", gap: 12 }}>
                 {[
                   { id: "member_length", label: "Member Length", min: 0, max: 12, unit: "in" },
-                  { id: "member_girth", label: "Member Girth", min: 0, max: 8, unit: "in" },
+                  { id: "member_girth",  label: "Member Girth",  min: 0, max: 8,  unit: "in" },
                 ].map((f) => (
                   <label key={f.id}>
                     <div style={labelText}>{f.label}</div>
@@ -632,12 +636,12 @@ export default function Page() {
               <summary style={{ cursor: "pointer", fontWeight: 700 }}>Anthropometrics</summary>
               <div style={{ marginTop: 12, display: "grid", gap: 12 }}>
                 {[
-                  { id: "chest_size", label: "Chest size", min: 0, max: 70, unit: "in" },
-                  { id: "arm_size", label: "Arm size", min: 0, max: 30, unit: "in" },
-                  { id: "quad_size", label: "Quad size", min: 0, max: 40, unit: "in" },
+                  { id: "chest_size",    label: "Chest size",    min: 0, max: 70, unit: "in" },
+                  { id: "arm_size",      label: "Arm size",      min: 0, max: 30, unit: "in" },
+                  { id: "quad_size",     label: "Quad size",     min: 0, max: 40, unit: "in" },
                   { id: "shoulder_size", label: "Shoulder size", min: 0, max: 80, unit: "in" },
-                  { id: "height", label: "Height", min: 0, max: 100, unit: "in" },
-                  { id: "body_fat", label: "Body Fat %", min: 0, max: 60, unit: "%" },
+                  { id: "height",        label: "Height",        min: 0, max: 100, unit: "in" },
+                  { id: "body_fat",      label: "Body Fat %",    min: 0, max: 60, unit: "%" },
                 ].map((f) => (
                   <label key={f.id}>
                     <div style={labelText}>{f.label}</div>
@@ -650,49 +654,44 @@ export default function Page() {
             <details style={box}>
               <summary style={{ cursor: "pointer", fontWeight: 700 }}>Appearance</summary>
               <div style={{ marginTop: 12, display: "grid", gap: 12 }}>
-                {/* Shoe Size is numeric; others are selects */}
                 <label>
                   <div style={labelText}>Shoe Size</div>
                   <NumberInput value={answers["shoe_size"]} onChange={(v) => setAnswers((a) => ({ ...a, shoe_size: v }))} min={0} max={20} step={0.5} unit="US" />
                 </label>
                 {[
                   {
-                    id: "facial_hair",
-                    label: "Facial Hair",
+                    id: "facial_hair", label: "Facial Hair",
                     options: [
                       { label: "Clean shaven", value: 50 },
-                      { label: "Stubble", value: 70 },
+                      { label: "Stubble",       value: 70 },
                       { label: "Trimmed beard", value: 85 },
-                      { label: "Full beard", value: 95 },
+                      { label: "Full beard",    value: 95 },
                     ],
                   },
                   {
-                    id: "chest_hair",
-                    label: "Chest Hair",
+                    id: "chest_hair", label: "Chest Hair",
                     options: [
-                      { label: "None", value: 70 },
-                      { label: "Light", value: 80 },
+                      { label: "None",     value: 70 },
+                      { label: "Light",    value: 80 },
                       { label: "Moderate", value: 90 },
-                      { label: "Thick", value: 95 },
+                      { label: "Thick",    value: 95 },
                     ],
                   },
                   {
-                    id: "calloused_hands",
-                    label: "Calloused Hands",
+                    id: "calloused_hands", label: "Calloused Hands",
                     options: [
-                      { label: "Soft", value: 50 },
-                      { label: "Some", value: 80 },
+                      { label: "Soft",        value: 50 },
+                      { label: "Some",        value: 80 },
                       { label: "Well-earned", value: 95 },
                     ],
                   },
                   {
-                    id: "hand_size",
-                    label: "Hand Size",
+                    id: "hand_size", label: "Hand Size",
                     options: [
-                      { label: "Small", value: 50 },
-                      { label: "Medium", value: 75 },
-                      { label: "Large", value: 90 },
-                      { label: "Extra Large", value: 100 },
+                      { label: "Small",        value: 50 },
+                      { label: "Medium",       value: 75 },
+                      { label: "Large",        value: 90 },
+                      { label: "Extra Large",  value: 100 },
                     ],
                   },
                 ].map((f) => (
@@ -703,13 +702,9 @@ export default function Page() {
                       value={String(answers[f.id] ?? "")}
                       onChange={(e) => setAnswers((a) => ({ ...a, [f.id]: Number(e.target.value) }))}
                     >
-                      <option value="" disabled>
-                        Choose…
-                      </option>
+                      <option value="" disabled>Choose…</option>
                       {f.options.map((o) => (
-                        <option key={o.label} value={o.value}>
-                          {o.label}
-                        </option>
+                        <option key={o.label} value={o.value}>{o.label}</option>
                       ))}
                     </select>
                   </label>
@@ -721,22 +716,8 @@ export default function Page() {
               <summary style={{ cursor: "pointer", fontWeight: 700 }}>Knowledge (1–10)</summary>
               <div style={{ marginTop: 12, display: "grid", gap: 12 }}>
                 {[
-                  "street",
-                  "academics",
-                  "sports",
-                  "financial",
-                  "strength",
-                  "politics",
-                  "travel",
-                  "survival",
-                  "nutrition",
-                  "first_aid",
-                  "mechanics",
-                  "navigation",
-                  "cooking",
-                  "home_repair",
-                  "leadership",
-                  "tech",
+                  "street","academics","sports","financial","strength","politics","travel","survival",
+                  "nutrition","first_aid","mechanics","navigation","cooking","home_repair","leadership","tech",
                 ].map((k) => {
                   const id = "knowledge_" + k;
                   const label = "Knowledge — " + k.replace("_", " ").replace(/\b\w/g, (c) => c.toUpperCase());
@@ -753,22 +734,15 @@ export default function Page() {
             <details style={box}>
               <summary style={{ cursor: "pointer", fontWeight: 700 }}>Activities</summary>
               <div style={{ marginTop: 12, display: "grid", gap: 8 }}>
-                {(
-                  CFG.factors.find((x) => x.id === "activities") as ChecklistFactor
-                ).items.map((it) => {
+                {(CFG.factors.find((x) => x.id === "activities") as ChecklistFactor).items.map((it) => {
                   const set = (answers["activities"] as Record<string, boolean>) || {};
                   const checked = !!set[it.id];
                   return (
-                    <label key={it.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", border: "1px solid #e5e7eb", borderRadius: 8 }}>
+                    <label key={it.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", border: "1px solid rgba(148,163,184,0.3)", borderRadius: 8, background: "rgba(2,6,23,0.55)" }}>
                       <input
                         type="checkbox"
                         checked={checked}
-                        onChange={(e) =>
-                          setAnswers((a) => ({
-                            ...a,
-                            activities: { ...(a.activities || {}), [it.id]: e.target.checked },
-                          }))
-                        }
+                        onChange={(e) => setAnswers((a) => ({ ...a, activities: { ...(a.activities || {}), [it.id]: e.target.checked } }))}
                       />
                       <span style={{ fontSize: 14 }}>{it.label}</span>
                     </label>
@@ -782,15 +756,7 @@ export default function Page() {
               <div style={{ marginTop: 12 }}>
                 <label>
                   <div style={labelText}>Alpha Look (admin rated 0–100)</div>
-                  <NumberInput
-                    value={answers["alpha_look"]}
-                    onChange={(v) => setAnswers((a) => ({ ...a, alpha_look: v }))}
-                    min={0}
-                    max={100}
-                    step={1}
-                    unit="/100"
-                    disabled={!isAdmin}
-                  />
+                  <NumberInput value={answers["alpha_look"]} onChange={(v) => setAnswers((a) => ({ ...a, alpha_look: v }))} min={0} max={100} step={1} unit="/100" disabled={!isAdmin} />
                   {!isAdmin && <div style={helperText}>(admin sets this)</div>}
                 </label>
               </div>
@@ -801,22 +767,50 @@ export default function Page() {
           <div style={{ ...box, marginTop: 12 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
               <div>
-                <div style={{ fontSize: 12, color: "#64748b" }}>Alpha Lever (out of 1000)</div>
-                <div style={{ fontSize: 28, fontWeight: 800 }}>{score1000}</div>
-                <div style={{ fontSize: 13, color: "#475569" }}>
-                  {level.name} — {level.blurb}
-                </div>
+                <div style={{ fontSize: 12, color: "#94a3b8" }}>Alpha Lever (out of 1000)</div>
+                <div style={{ fontSize: 28, fontWeight: 800, color: "#f8fafc" }}>{score1000}</div>
+                <div style={{ fontSize: 13, color: "#cbd5e1" }}>{level.name} — {level.blurb}</div>
               </div>
               <div style={{ display: "flex", gap: 8 }}>
-                <button onClick={handleSaveProfile} style={buttonPrimary}>
-                  Save
-                </button>
-                <button onClick={() => setAnswers({})} style={buttonGhost}>
-                  Reset
-                </button>
+                <button onClick={handleSaveProfile} style={buttonPrimary}>Save</button>
+                <button onClick={() => setAnswers({})} style={buttonGhost}>Reset</button>
               </div>
             </div>
           </div>
+
+          {/* Leaderboard */}
+          <details style={{ ...box, marginTop: 12 }}>
+            <summary style={{ cursor: "pointer", fontWeight: 700 }}>Leaderboard</summary>
+            <div style={{ marginTop: 12, display: "grid", gap: 12 }}>
+              {leaderboard.length === 0 ? (
+                <div style={helperText}>No users yet.</div>
+              ) : (
+                leaderboard.map((row, idx) => (
+                  <div key={row.email} style={{ display: "flex", alignItems: "center", gap: 12, padding: 10, border: "1px solid rgba(148,163,184,0.3)", borderRadius: 12, background: "rgba(2,6,23,0.55)" }}>
+                    <div style={{ width: 24, textAlign: "right", fontWeight: 700 }}>{idx + 1}</div>
+                    <div style={{ width: 48, height: 48, borderRadius: 10, overflow: "hidden", background: "rgba(2,6,23,0.6)", border: "1px solid rgba(148,163,184,0.3)" }}>
+                      {row.photo ? (
+                        <img src={row.photo} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      ) : (
+                        <div style={{ fontSize: 10, color: "#94a3b8", height: "100%", display: "grid", placeItems: "center" }}>No photo</div>
+                      )}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 14, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", color: "#f8fafc" }}>
+                        {row.name}
+                      </div>
+                      <div style={{ fontSize: 12, color: "#94a3b8", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                        {row.email}
+                      </div>
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                      <div style={{ fontSize: 18, fontWeight: 800, color: "#f8fafc" }}>{row.score}</div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </details>
         </>
       )}
     </main>
