@@ -16,6 +16,10 @@ type UserRecord = {
     name?: string;
     profilePhoto?: string;
     assessmentPhoto?: string;
+    measurementPhoto?: string;
+    measurementPhotoRating?: number;
+    assessmentPhotoRating?: number;
+    bonusPhotoRatings?: number[];
     extraAlphaPhotos?: string[];
   };
   answers?: Record<string, any>;
@@ -445,6 +449,34 @@ const FACTORS: Factor[] = [
     adminOnly: true,
   },
 
+  {
+    kind: "number",
+    id: "measurement_photo_rating",
+    label: "Measurement Photo Rating",
+    unit: "/100",
+    weight: 0.01,
+    domain: { min: 0, max: 100, better: "higher" },
+    adminOnly: true,
+  },
+  {
+    kind: "number",
+    id: "physique_photo_rating",
+    label: "Physique Assessment Rating",
+    unit: "/100",
+    weight: 0.01,
+    domain: { min: 0, max: 100, better: "higher" },
+    adminOnly: true,
+  },
+  {
+    kind: "number",
+    id: "bonus_photos_rating",
+    label: "Bonus Alpha Photos Rating",
+    unit: "/100",
+    weight: 0.01,
+    domain: { min: 0, max: 100, better: "higher" },
+    adminOnly: true,
+  },
+
   /* LIFE */
 
   {
@@ -583,11 +615,13 @@ const pageWrap: React.CSSProperties = {
 
 const card: React.CSSProperties = {
   background:
-    "linear-gradient(145deg, rgba(8,12,18,.94), rgba(15,23,42,.90))",
-  border: "1px solid rgba(255,255,255,.13)",
-  borderRadius: 16,
+    "linear-gradient(145deg, rgba(5,8,13,.96), rgba(18,24,34,.93))",
+  border: "1px solid rgba(148,163,184,.20)",
+  borderTop: "1px solid rgba(248,250,252,.24)",
+  borderRadius: 14,
   padding: 20,
-  boxShadow: "0 14px 40px rgba(0,0,0,.35)",
+  boxShadow:
+    "0 16px 45px rgba(0,0,0,.42), inset 0 1px 0 rgba(255,255,255,.025)",
 };
 
 const inputStyle: React.CSSProperties = {
@@ -654,8 +688,11 @@ const helperStyle: React.CSSProperties = {
 const sectionTitle: React.CSSProperties = {
   margin: 0,
   fontSize: 21,
-  fontWeight: 900,
-  letterSpacing: "-.3px",
+  fontWeight: 950,
+  letterSpacing: ".7px",
+  textTransform: "uppercase",
+  borderLeft: "4px solid #dc2626",
+  paddingLeft: 10,
 };
 
 const sectionDescription: React.CSSProperties = {
@@ -1148,6 +1185,10 @@ export default function Page() {
   const [name, setName] = useState("");
   const [profilePhoto, setProfilePhoto] = useState<string>();
   const [assessmentPhoto, setAssessmentPhoto] = useState<string>();
+  const [measurementPhoto, setMeasurementPhoto] = useState<string>();
+  const [measurementPhotoRating, setMeasurementPhotoRating] = useState(0);
+  const [assessmentPhotoRating, setAssessmentPhotoRating] = useState(0);
+  const [bonusPhotoRatings, setBonusPhotoRatings] = useState<number[]>([]);
   const [bonusPhotos, setBonusPhotos] = useState<string[]>([]);
   const [answers, setAnswers] = useState<Record<string, any>>({});
 
@@ -1174,9 +1215,27 @@ export default function Page() {
     setName(user.profile?.name || "");
     setProfilePhoto(user.profile?.profilePhoto);
     setAssessmentPhoto(user.profile?.assessmentPhoto);
+    setMeasurementPhoto(user.profile?.measurementPhoto);
+    setMeasurementPhotoRating(user.profile?.measurementPhotoRating || 0);
+    setAssessmentPhotoRating(user.profile?.assessmentPhotoRating || 0);
+    setBonusPhotoRatings(user.profile?.bonusPhotoRatings || []);
     setBonusPhotos(user.profile?.extraAlphaPhotos || []);
     setAnswers(user.answers || {});
   }, [currentEmail]);
+
+  useEffect(() => {
+    const rated = bonusPhotoRatings.slice(0, bonusPhotos.length);
+    const bonusAverage = rated.length
+      ? rated.reduce((sum, value) => sum + (Number(value) || 0), 0) / rated.length
+      : 0;
+
+    setAnswers((previous) => ({
+      ...previous,
+      measurement_photo_rating: measurementPhoto ? measurementPhotoRating : 0,
+      physique_photo_rating: assessmentPhoto ? assessmentPhotoRating : 0,
+      bonus_photos_rating: bonusPhotos.length ? bonusAverage : 0,
+    }));
+  }, [measurementPhoto, measurementPhotoRating, assessmentPhoto, assessmentPhotoRating, bonusPhotos, bonusPhotoRatings]);
 
   const clubNumber =
     (Number(answers.max_bench) || 0) +
@@ -1272,6 +1331,9 @@ export default function Page() {
   const adminFactors = getFactors([
     "alpha_look",
     "alpha_bonus",
+    "measurement_photo_rating",
+    "physique_photo_rating",
+    "bonus_photos_rating",
   ]);
 
   const activityFactor = FACTORS.find(
@@ -1390,6 +1452,12 @@ export default function Page() {
     setAssessmentPhoto(url);
   }
 
+  async function uploadMeasurementPhoto(file?: File) {
+    if (!file) return;
+    const url = await fileToDataURL(file);
+    setMeasurementPhoto(url);
+  }
+
   async function uploadBonusPhotos(files: FileList | null) {
     if (!files?.length) return;
 
@@ -1400,12 +1468,12 @@ export default function Page() {
     }
 
     setBonusPhotos((previous) => [...previous, ...converted]);
+    setBonusPhotoRatings((previous) => [...previous, ...converted.map(() => 0)]);
   }
 
   function removeBonusPhoto(index: number) {
-    setBonusPhotos((previous) =>
-      previous.filter((_, i) => i !== index)
-    );
+    setBonusPhotos((previous) => previous.filter((_, i) => i !== index));
+    setBonusPhotoRatings((previous) => previous.filter((_, i) => i !== index));
   }
 
   function saveProfile() {
@@ -1424,6 +1492,10 @@ export default function Page() {
             name,
             profilePhoto,
             assessmentPhoto,
+            measurementPhoto,
+            measurementPhotoRating,
+            assessmentPhotoRating,
+            bonusPhotoRatings,
             extraAlphaPhotos: bonusPhotos,
           },
 
@@ -1444,6 +1516,270 @@ export default function Page() {
     if (!confirmed) return;
 
     setAnswers({});
+  }
+
+  async function downloadShareCard() {
+    const canvas = document.createElement("canvas");
+    canvas.width = 1080;
+    canvas.height = 1350;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const W = canvas.width;
+    const H = canvas.height;
+
+    const roundRect = (
+      x: number,
+      y: number,
+      w: number,
+      h: number,
+      r: number
+    ) => {
+      const radius = Math.min(r, w / 2, h / 2);
+      ctx.beginPath();
+      ctx.moveTo(x + radius, y);
+      ctx.arcTo(x + w, y, x + w, y + h, radius);
+      ctx.arcTo(x + w, y + h, x, y + h, radius);
+      ctx.arcTo(x, y + h, x, y, radius);
+      ctx.arcTo(x, y, x + w, y, radius);
+      ctx.closePath();
+    };
+
+    const fitText = (
+      text: string,
+      maxWidth: number,
+      startSize: number,
+      weight = 900
+    ) => {
+      let size = startSize;
+      while (size > 28) {
+        ctx.font = `${weight} ${size}px Arial`;
+        if (ctx.measureText(text).width <= maxWidth) break;
+        size -= 2;
+      }
+      return size;
+    };
+
+    const drawPhoto = async (src: string) => {
+      const img = new Image();
+      img.src = src;
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve();
+        img.onerror = () => reject();
+      });
+
+      const x = 70;
+      const y = 250;
+      const w = 400;
+      const h = 480;
+
+      const imageRatio = img.width / img.height;
+      const boxRatio = w / h;
+
+      let sx = 0;
+      let sy = 0;
+      let sw = img.width;
+      let sh = img.height;
+
+      if (imageRatio > boxRatio) {
+        sw = img.height * boxRatio;
+        sx = (img.width - sw) / 2;
+      } else {
+        sh = img.width / boxRatio;
+        sy = (img.height - sh) / 2;
+      }
+
+      ctx.save();
+      roundRect(x, y, w, h, 26);
+      ctx.clip();
+      ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h);
+      ctx.restore();
+
+      ctx.strokeStyle = "rgba(255,255,255,.28)";
+      ctx.lineWidth = 3;
+      roundRect(x, y, w, h, 26);
+      ctx.stroke();
+    };
+
+    const background = ctx.createLinearGradient(0, 0, W, H);
+    background.addColorStop(0, "#030507");
+    background.addColorStop(0.55, "#111827");
+    background.addColorStop(1, "#240606");
+    ctx.fillStyle = background;
+    ctx.fillRect(0, 0, W, H);
+
+    // Industrial diagonal texture.
+    ctx.strokeStyle = "rgba(255,255,255,.025)";
+    ctx.lineWidth = 2;
+    for (let x = -H; x < W; x += 42) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x + H, H);
+      ctx.stroke();
+    }
+
+    // Red top rail.
+    ctx.fillStyle = "#b91c1c";
+    ctx.fillRect(0, 0, W, 14);
+
+    ctx.textAlign = "left";
+    ctx.fillStyle = "#ef4444";
+    ctx.font = "900 27px Arial";
+    ctx.fillText("ALPHA STATUS", 70, 82);
+
+    ctx.fillStyle = "#f8fafc";
+    ctx.font = "950 70px Arial";
+    ctx.fillText("STRENGTH • CAPABILITY • PRESENCE", 70, 155);
+
+    ctx.fillStyle = "#64748b";
+    ctx.fillRect(70, 190, 940, 2);
+
+    if (profilePhoto) {
+      try {
+        await drawPhoto(profilePhoto);
+      } catch {
+        ctx.fillStyle = "#0f172a";
+        roundRect(70, 250, 400, 480, 26);
+        ctx.fill();
+      }
+    } else {
+      ctx.fillStyle = "#0f172a";
+      roundRect(70, 250, 400, 480, 26);
+      ctx.fill();
+      ctx.fillStyle = "#64748b";
+      ctx.font = "800 30px Arial";
+      ctx.textAlign = "center";
+      ctx.fillText("PROFILE PHOTO", 270, 500);
+      ctx.textAlign = "left";
+    }
+
+    const displayName = (name || "UNNAMED").toUpperCase();
+    const nameSize = fitText(displayName, 500, 68, 950);
+    ctx.fillStyle = "#f8fafc";
+    ctx.font = `950 ${nameSize}px Arial`;
+    ctx.fillText(displayName, 520, 310);
+
+    ctx.fillStyle = "#ef4444";
+    ctx.font = "900 30px Arial";
+    ctx.fillText(level.name, 520, 360);
+
+    ctx.fillStyle = "#f8fafc";
+    ctx.font = "950 138px Arial";
+    ctx.fillText(String(score), 520, 505);
+
+    ctx.fillStyle = "#94a3b8";
+    ctx.font = "800 27px Arial";
+    ctx.fillText("/ 1000 ALPHA STATUS", 525, 548);
+
+    ctx.fillStyle = "#111827";
+    roundRect(520, 590, 490, 140, 20);
+    ctx.fill();
+    ctx.strokeStyle = "rgba(239,68,68,.55)";
+    ctx.lineWidth = 2;
+    roundRect(520, 590, 490, 140, 20);
+    ctx.stroke();
+
+    ctx.fillStyle = "#94a3b8";
+    ctx.font = "900 22px Arial";
+    ctx.fillText("STRENGTH CLUB", 550, 630);
+    ctx.fillStyle = "#f8fafc";
+    ctx.font = "950 54px Arial";
+    ctx.fillText(`${clubNumber} LB`, 550, 692);
+    ctx.fillStyle = "#ef4444";
+    ctx.font = "900 23px Arial";
+    ctx.fillText(clubName, 790, 692);
+
+    const statY = 790;
+    const statW = 290;
+    const gap = 35;
+    const stats = [
+      ["BENCH", `${answers.max_bench || 0} LB`],
+      ["SQUAT", `${answers.max_squat || 0} LB`],
+      ["DEADLIFT", `${answers.max_deadlift || 0} LB`],
+    ];
+
+    stats.forEach(([label, value], index) => {
+      const x = 70 + index * (statW + gap);
+      ctx.fillStyle = "rgba(2,6,23,.78)";
+      roundRect(x, statY, statW, 145, 18);
+      ctx.fill();
+      ctx.strokeStyle = "rgba(148,163,184,.22)";
+      roundRect(x, statY, statW, 145, 18);
+      ctx.stroke();
+
+      ctx.fillStyle = "#94a3b8";
+      ctx.font = "900 20px Arial";
+      ctx.fillText(label, x + 24, statY + 40);
+      ctx.fillStyle = "#f8fafc";
+      ctx.font = "950 42px Arial";
+      ctx.fillText(value, x + 24, statY + 98);
+    });
+
+    const mileText = answers.mile_time ? String(answers.mile_time) : "—";
+    const pullText = answers.max_pullups ? String(answers.max_pullups) : "—";
+    const workoutText = answers.workout_days ? String(answers.workout_days) : "—";
+    const bodyText = [
+      answers.height ? `${answers.height}"` : null,
+      answers.weight ? `${answers.weight} LB` : null,
+      answers.body_fat ? `${answers.body_fat}% BF` : null,
+    ].filter(Boolean).join(" • ") || "BODY STATS NOT ENTERED";
+
+    ctx.fillStyle = "#94a3b8";
+    ctx.font = "900 20px Arial";
+    ctx.fillText("BODY", 70, 1000);
+    ctx.fillStyle = "#f8fafc";
+    ctx.font = "800 31px Arial";
+    ctx.fillText(bodyText, 70, 1040);
+
+    ctx.fillStyle = "#94a3b8";
+    ctx.font = "900 20px Arial";
+    ctx.fillText("PERFORMANCE", 70, 1095);
+    ctx.fillStyle = "#f8fafc";
+    ctx.font = "800 30px Arial";
+    ctx.fillText(
+      `${mileText} MILE  •  ${pullText} PULL-UPS  •  ${workoutText} DAYS/WEEK`,
+      70,
+      1136
+    );
+
+    ctx.fillStyle = "#94a3b8";
+    ctx.font = "900 20px Arial";
+    ctx.fillText("ACHIEVEMENTS", 70, 1190);
+
+    const topAchievements = achievements.slice(-4).reverse();
+    ctx.fillStyle = "#f8fafc";
+    ctx.font = "800 26px Arial";
+    ctx.fillText(
+      topAchievements.length
+        ? topAchievements.map((item) => item.title).join("  •  ")
+        : "BUILDING THE TROPHY CASE",
+      70,
+      1230
+    );
+
+    ctx.fillStyle = "#ef4444";
+    ctx.fillRect(70, 1275, 940, 3);
+    ctx.fillStyle = "#94a3b8";
+    ctx.font = "800 18px Arial";
+    ctx.fillText(
+      `${activityCount} ACTIVITIES  •  ${achievements.length} ACHIEVEMENTS  •  ${completion}% PROFILE COMPLETE`,
+      70,
+      1315
+    );
+
+    const url = canvas.toDataURL("image/png");
+    const link = document.createElement("a");
+    const safeName = (name || "alpha-status")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "");
+
+    link.href = url;
+    link.download = `${safeName || "alpha-status"}-share-card.png`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
   }
 
   function exportCSV() {
@@ -1863,9 +2199,25 @@ export default function Page() {
             style={{
               ...card,
               textAlign: "center",
-              padding: "30px 20px",
+              padding: "42px 20px 38px",
+              position: "relative",
+              overflow: "hidden",
+              background:
+                "radial-gradient(circle at 50% 35%, rgba(127,29,29,.48), transparent 34%), linear-gradient(145deg, rgba(3,5,8,.98), rgba(15,23,42,.95))",
+              border: "1px solid rgba(239,68,68,.30)",
+              boxShadow:
+                "0 22px 60px rgba(0,0,0,.48), inset 0 0 80px rgba(127,29,29,.08)",
             }}
           >
+            <div
+              style={{
+                position: "absolute",
+                inset: 14,
+                border: "1px solid rgba(255,255,255,.055)",
+                borderRadius: 10,
+                pointerEvents: "none",
+              }}
+            />
             <div
               style={{
                 color: "#ef4444",
@@ -1879,11 +2231,21 @@ export default function Page() {
 
             <div
               style={{
-                fontSize: 78,
+                fontSize: 88,
                 lineHeight: 1,
                 fontWeight: 950,
-                marginTop: 9,
+                margin: "18px auto 0",
                 letterSpacing: -4,
+                width: 210,
+                height: 210,
+                borderRadius: "50%",
+                display: "grid",
+                placeItems: "center",
+                border: "8px double rgba(239,68,68,.72)",
+                boxShadow:
+                  "0 0 0 7px rgba(255,255,255,.035), 0 0 45px rgba(220,38,38,.18)",
+                background:
+                  "radial-gradient(circle, rgba(69,10,10,.55), rgba(2,6,23,.82))",
               }}
             >
               {score}
@@ -1967,6 +2329,29 @@ export default function Page() {
                 <div style={{ color: "#94a3b8", fontSize: 11, marginTop: 2 }}>
                   Bench {answers.max_bench || 0} • Squat {answers.max_squat || 0} • Deadlift {answers.max_deadlift || 0}
                 </div>
+              </div>
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                gap: 9,
+                flexWrap: "wrap",
+                marginTop: 18,
+              }}
+            >
+              <button style={primaryButton} onClick={downloadShareCard}>
+                Download Alpha Card
+              </button>
+              <div
+                style={{
+                  alignSelf: "center",
+                  color: "#94a3b8",
+                  fontSize: 11,
+                  fontWeight: 700,
+                }}
+              >
+                1080 × 1350 PNG
               </div>
             </div>
 
@@ -2095,6 +2480,16 @@ export default function Page() {
                     borderRadius: 14,
                   }}
                 />
+                {adminMode && (
+                  <div style={{ marginTop: 12, maxWidth: 260 }}>
+                    <label style={{ fontSize: 12, fontWeight: 900 }}>
+                      Admin Rating: {assessmentPhotoRating}/100
+                    </label>
+                    <input type="range" min={0} max={100} step={1} value={assessmentPhotoRating}
+                      onChange={(event) => setAssessmentPhotoRating(Number(event.target.value))}
+                      style={{ width: "100%", marginTop: 8 }} />
+                  </div>
+                )}
               </div>
             )}
           </section>
@@ -2138,6 +2533,25 @@ export default function Page() {
                       }}
                     />
 
+                    {adminMode && (
+                      <div style={{ marginTop: 8 }}>
+                        <div style={{ fontSize: 11, fontWeight: 900 }}>
+                          Admin Rating: {bonusPhotoRatings[index] || 0}/100
+                        </div>
+                        <input type="range" min={0} max={100} step={1}
+                          value={bonusPhotoRatings[index] || 0}
+                          onChange={(event) => {
+                            const value = Number(event.target.value);
+                            setBonusPhotoRatings((previous) => {
+                              const next = [...previous];
+                              next[index] = value;
+                              return next;
+                            });
+                          }}
+                          style={{ width: "100%", marginTop: 5 }} />
+                      </div>
+                    )}
+
                     <button
                       style={{
                         ...dangerButton,
@@ -2166,13 +2580,82 @@ export default function Page() {
             adminMode={adminMode}
           />
 
+          {/* STRENGTH STAT PLATES */}
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))",
+              gap: 12,
+            }}
+          >
+            {[
+              ["BENCH PRESS", answers.max_bench || 0],
+              ["BACK SQUAT", answers.max_squat || 0],
+              ["DEADLIFT", answers.max_deadlift || 0],
+            ].map(([lift, value]) => (
+              <div
+                key={String(lift)}
+                style={{
+                  ...card,
+                  textAlign: "center",
+                  padding: "22px 14px",
+                  position: "relative",
+                  overflow: "hidden",
+                  background:
+                    "radial-gradient(circle at 50% 110%, rgba(127,29,29,.45), transparent 52%), linear-gradient(180deg, rgba(17,24,39,.96), rgba(3,5,8,.98))",
+                }}
+              >
+                <div
+                  style={{
+                    position: "absolute",
+                    left: -18,
+                    right: -18,
+                    top: "50%",
+                    height: 5,
+                    background: "rgba(148,163,184,.16)",
+                    boxShadow: "0 -4px 0 rgba(2,6,23,.9), 0 4px 0 rgba(2,6,23,.9)",
+                  }}
+                />
+                <div
+                  style={{
+                    position: "relative",
+                    color: "#94a3b8",
+                    fontSize: 11,
+                    fontWeight: 950,
+                    letterSpacing: 2.5,
+                  }}
+                >
+                  {lift}
+                </div>
+                <div
+                  style={{
+                    position: "relative",
+                    fontSize: 43,
+                    fontWeight: 950,
+                    marginTop: 8,
+                    textShadow: "0 3px 18px rgba(0,0,0,.8)",
+                  }}
+                >
+                  {value}
+                  <span style={{ fontSize: 15, color: "#94a3b8", marginLeft: 5 }}>
+                    LB
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+
           {/* CLUB TOTAL */}
 
           <section
             style={{
               ...card,
               textAlign: "center",
-              padding: "24px 20px",
+              padding: "30px 20px",
+              border: "2px solid rgba(239,68,68,.34)",
+              background:
+                "radial-gradient(circle, rgba(127,29,29,.32), transparent 52%), linear-gradient(145deg, rgba(3,5,8,.98), rgba(17,24,39,.96))",
             }}
           >
             <div
@@ -2226,6 +2709,54 @@ export default function Page() {
             updateAnswer={updateAnswer}
             adminMode={adminMode}
           />
+
+          <section style={card}>
+            <h2 style={sectionTitle}>Optional Measurement Photo</h2>
+            <div style={sectionDescription}>
+              Status: {measurementPhoto ? "Submitted" : "Not Submitted"}
+            </div>
+
+            {!measurementPhoto && (
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(event) => uploadMeasurementPhoto(event.target.files?.[0])}
+              />
+            )}
+
+            {measurementPhoto && !adminMode && (
+              <button
+                style={darkButton}
+                onClick={() => {
+                  setMeasurementPhoto(undefined);
+                  setMeasurementPhotoRating(0);
+                }}
+              >
+                Remove Submission
+              </button>
+            )}
+
+            {adminMode && measurementPhoto && (
+              <div style={{ marginTop: 15 }}>
+                <div style={{ color: "#94a3b8", fontSize: 11, fontWeight: 900, marginBottom: 8 }}>
+                  ADMIN REVIEW
+                </div>
+                <img
+                  src={measurementPhoto}
+                  alt="Measurement submission"
+                  style={{ width: "100%", maxWidth: 350, maxHeight: 450, objectFit: "cover", borderRadius: 14 }}
+                />
+                <div style={{ marginTop: 12, maxWidth: 260 }}>
+                  <label style={{ fontSize: 12, fontWeight: 900 }}>
+                    Measurement Photo Rating: {measurementPhotoRating}/100
+                  </label>
+                  <input type="range" min={0} max={100} step={1} value={measurementPhotoRating}
+                    onChange={(event) => setMeasurementPhotoRating(Number(event.target.value))}
+                    style={{ width: "100%", marginTop: 8 }} />
+                </div>
+              </div>
+            )}
+          </section>
 
           <FactorSection
             title="Athletic Performance"
@@ -2367,13 +2898,45 @@ export default function Page() {
                   <div
                     key={achievement.id}
                     style={{
-                      border: "1px solid rgba(255,255,255,.12)",
-                      borderRadius: 11,
-                      padding: 13,
-                      background: "rgba(15,23,42,.7)",
+                      border:
+                        achievement.bonus >= 5
+                          ? "1px solid rgba(239,68,68,.62)"
+                          : achievement.bonus >= 3
+                          ? "1px solid rgba(203,213,225,.34)"
+                          : "1px solid rgba(148,163,184,.20)",
+                      borderRadius: 14,
+                      padding: 15,
+                      background:
+                        achievement.bonus >= 5
+                          ? "radial-gradient(circle at 50% 0%, rgba(127,29,29,.50), rgba(15,23,42,.88) 62%)"
+                          : "linear-gradient(145deg, rgba(30,41,59,.82), rgba(2,6,23,.88))",
+                      boxShadow:
+                        achievement.bonus >= 5
+                          ? "inset 0 0 25px rgba(220,38,38,.08)"
+                          : "none",
                     }}
                   >
-                    <div style={{ fontSize: 14, fontWeight: 900 }}>{achievement.title}</div>
+                    <div
+                      style={{
+                        width: 42,
+                        height: 42,
+                        borderRadius: "50%",
+                        display: "grid",
+                        placeItems: "center",
+                        marginBottom: 10,
+                        background:
+                          achievement.bonus >= 5
+                            ? "rgba(185,28,28,.38)"
+                            : "rgba(71,85,105,.30)",
+                        border: "1px solid rgba(255,255,255,.12)",
+                        fontSize: 20,
+                      }}
+                    >
+                      ★
+                    </div>
+                    <div style={{ fontSize: 14, fontWeight: 950, letterSpacing: ".3px" }}>
+                      {achievement.title}
+                    </div>
                     <div style={{ color: "#94a3b8", fontSize: 11, marginTop: 4 }}>
                       {achievement.description}
                     </div>
@@ -2468,6 +3031,10 @@ export default function Page() {
                 Save Profile
               </button>
 
+              <button style={darkButton} onClick={downloadShareCard}>
+                Download Alpha Card
+              </button>
+
               <button
                 style={lightButton}
                 onClick={() => setView("leaderboard")}
@@ -2512,6 +3079,45 @@ function Background() {
           inset: 0,
           background:
             "linear-gradient(to bottom, rgba(2,6,23,.28), rgba(2,6,23,.96))",
+          pointerEvents: "none",
+          zIndex: 1,
+        }}
+      />
+
+      <div
+        style={{
+          position: "fixed",
+          inset: 0,
+          backgroundImage:
+            "repeating-linear-gradient(135deg, rgba(255,255,255,.018) 0px, rgba(255,255,255,.018) 1px, transparent 1px, transparent 22px)",
+          pointerEvents: "none",
+          zIndex: 1,
+        }}
+      />
+
+      <div
+        style={{
+          position: "fixed",
+          left: 0,
+          top: 0,
+          bottom: 0,
+          width: 5,
+          background:
+            "linear-gradient(to bottom, transparent, rgba(185,28,28,.72) 25%, rgba(185,28,28,.72) 75%, transparent)",
+          pointerEvents: "none",
+          zIndex: 1,
+        }}
+      />
+
+      <div
+        style={{
+          position: "fixed",
+          right: 0,
+          top: 0,
+          bottom: 0,
+          width: 5,
+          background:
+            "linear-gradient(to bottom, transparent, rgba(185,28,28,.72) 25%, rgba(185,28,28,.72) 75%, transparent)",
           pointerEvents: "none",
           zIndex: 1,
         }}
