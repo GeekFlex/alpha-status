@@ -1,113 +1,577 @@
 "use client";
-// Alpha Status production deployment
+
 import React, { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 
-import {
-  FACTORS,
-  USERS_KEY,
-  calculateAlphaScore,
-  levelFor,
-  type Factor,
-  type UserRecord,
-} from "./lib/alpha";
+/* =========================================================
+   ALPHA STATUS
+   Single-file testing version
+   ========================================================= */
 
-/* =========================================
-   STYLES
-   ========================================= */
+const USERS_KEY = "alpha_status_test_v1";
 
-const pageWrap: React.CSSProperties = {
-  maxWidth: 1100,
-  margin: "0 auto",
-  padding: "24px 18px 60px",
-  position: "relative",
-  zIndex: 1,
-  fontFamily: "system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif",
+/* =========================================================
+   TYPES
+   ========================================================= */
+
+type UserRecord = {
+  passwordHash: string;
+  createdAt: number;
+  isAdmin?: boolean;
+  profile?: {
+    name?: string;
+    profilePhoto?: string;
+    assessmentPhoto?: string;
+    extraAlphaPhotos?: string[];
+  };
+  answers?: Record<string, any>;
 };
 
-const box: React.CSSProperties = {
-  border: "1px solid rgba(255,255,255,0.12)",
-  borderRadius: 14,
-  background: "rgba(2,6,23,0.82)",
-  padding: 18,
-  color: "#f8fafc",
-  boxShadow: "0 10px 30px rgba(0,0,0,0.25)",
+type Domain = {
+  min: number;
+  max: number;
+  better: "higher" | "lower";
+};
+
+type NumberFactor = {
+  kind: "number";
+  id: string;
+  label: string;
+  unit: string;
+  weight: number;
+  domain: Domain;
+  adminOnly?: boolean;
+};
+
+type SelectFactor = {
+  kind: "select";
+  id: string;
+  label: string;
+  weight: number;
+  options: {
+    label: string;
+    value: number;
+  }[];
+};
+
+type ChecklistFactor = {
+  kind: "checklist";
+  id: string;
+  label: string;
+  weight: number;
+  cap: number;
+  items: {
+    id: string;
+    label: string;
+    points: number;
+  }[];
+};
+
+type Factor = NumberFactor | SelectFactor | ChecklistFactor;
+
+/* =========================================================
+   SCORING CONFIGURATION
+   ========================================================= */
+
+const FACTORS: Factor[] = [
+  /* APPEARANCE */
+
+  {
+    kind: "select",
+    id: "facial_hair",
+    label: "Facial Hair",
+    weight: 0.01,
+    options: [
+      { label: "Clean shaven", value: 50 },
+      { label: "Stubble", value: 70 },
+      { label: "Trimmed beard", value: 85 },
+      { label: "Full beard", value: 95 },
+    ],
+  },
+
+  {
+    kind: "select",
+    id: "chest_hair",
+    label: "Chest Hair",
+    weight: 0.01,
+    options: [
+      { label: "None", value: 70 },
+      { label: "Light", value: 80 },
+      { label: "Moderate", value: 90 },
+      { label: "Thick", value: 95 },
+    ],
+  },
+
+  {
+    kind: "select",
+    id: "calloused_hands",
+    label: "Calloused Hands",
+    weight: 0.01,
+    options: [
+      { label: "Soft", value: 50 },
+      { label: "Some", value: 80 },
+      { label: "Well-earned", value: 95 },
+    ],
+  },
+
+  {
+    kind: "select",
+    id: "hand_size",
+    label: "Hand Size",
+    weight: 0.02,
+    options: [
+      { label: "Small", value: 50 },
+      { label: "Medium", value: 75 },
+      { label: "Large", value: 90 },
+      { label: "Extra Large", value: 100 },
+    ],
+  },
+
+  {
+    kind: "number",
+    id: "shoe_size",
+    label: "Shoe Size",
+    unit: "US",
+    weight: 0.02,
+    domain: { min: 0, max: 20, better: "higher" },
+  },
+
+  /* BODY */
+
+  {
+    kind: "number",
+    id: "chest_size",
+    label: "Chest Size",
+    unit: "in",
+    weight: 0.03,
+    domain: { min: 0, max: 70, better: "higher" },
+  },
+
+  {
+    kind: "number",
+    id: "arm_size",
+    label: "Arm Size",
+    unit: "in",
+    weight: 0.03,
+    domain: { min: 0, max: 30, better: "higher" },
+  },
+
+  {
+    kind: "number",
+    id: "quad_size",
+    label: "Quad Size",
+    unit: "in",
+    weight: 0.03,
+    domain: { min: 0, max: 40, better: "higher" },
+  },
+
+  {
+    kind: "number",
+    id: "shoulder_size",
+    label: "Shoulder Size",
+    unit: "in",
+    weight: 0.03,
+    domain: { min: 0, max: 80, better: "higher" },
+  },
+
+  {
+    kind: "number",
+    id: "height",
+    label: "Height",
+    unit: "in",
+    weight: 0.02,
+    domain: { min: 0, max: 100, better: "higher" },
+  },
+
+  {
+    kind: "number",
+    id: "body_fat",
+    label: "Body Fat",
+    unit: "%",
+    weight: 0.03,
+    domain: { min: 0, max: 60, better: "lower" },
+  },
+
+  /* STRENGTH */
+
+  {
+    kind: "number",
+    id: "max_bench",
+    label: "Max Bench Press",
+    unit: "lb",
+    weight: 0.12,
+    domain: { min: 0, max: 1000, better: "higher" },
+  },
+
+  {
+    kind: "number",
+    id: "max_deadlift",
+    label: "Max Deadlift",
+    unit: "lb",
+    weight: 0.12,
+    domain: { min: 0, max: 1000, better: "higher" },
+  },
+
+  {
+    kind: "number",
+    id: "max_squat",
+    label: "Max Squat",
+    unit: "lb",
+    weight: 0.12,
+    domain: { min: 0, max: 1000, better: "higher" },
+  },
+
+  /* CONDITIONING */
+
+  {
+    kind: "number",
+    id: "mile_time",
+    label: "Fastest 1 Mile",
+    unit: "mm.ss",
+    weight: 0.08,
+    domain: { min: 0, max: 3600, better: "lower" },
+  },
+
+  {
+    kind: "number",
+    id: "workout_days",
+    label: "Workout Days per Week",
+    unit: "days",
+    weight: 0.05,
+    domain: { min: 0, max: 7, better: "higher" },
+  },
+
+  /* MEMBER */
+
+  {
+    kind: "number",
+    id: "member_length",
+    label: "Member Length",
+    unit: "in",
+    weight: 0.14,
+    domain: { min: 0, max: 12, better: "higher" },
+  },
+
+  {
+    kind: "number",
+    id: "member_girth",
+    label: "Member Girth",
+    unit: "in",
+    weight: 0.1,
+    domain: { min: 0, max: 8, better: "higher" },
+  },
+
+  /* ADMIN */
+
+  {
+    kind: "number",
+    id: "alpha_look",
+    label: "Alpha Look",
+    unit: "/100",
+    weight: 0.07,
+    domain: { min: 0, max: 100, better: "higher" },
+    adminOnly: true,
+  },
+
+  {
+    kind: "number",
+    id: "alpha_bonus",
+    label: "Bonus Alpha Rating",
+    unit: "/100",
+    weight: 0.05,
+    domain: { min: 0, max: 100, better: "higher" },
+    adminOnly: true,
+  },
+
+  /* LIFE */
+
+  {
+    kind: "number",
+    id: "hit_number",
+    label: "Hit Number",
+    unit: "#",
+    weight: 0.02,
+    domain: { min: 0, max: 500, better: "higher" },
+  },
+
+  {
+    kind: "number",
+    id: "children_count",
+    label: "Number of Children",
+    unit: "#",
+    weight: 0.03,
+    domain: { min: 0, max: 10, better: "higher" },
+  },
+
+  /* KNOWLEDGE */
+
+  ...[
+    ["knowledge_street", "Street Smarts"],
+    ["knowledge_academics", "Academics"],
+    ["knowledge_sports", "Sports"],
+    ["knowledge_financial", "Financial"],
+    ["knowledge_strength", "Strength Training"],
+    ["knowledge_politics", "Politics"],
+    ["knowledge_travel", "World Travel"],
+    ["knowledge_survival", "Survival"],
+    ["knowledge_nutrition", "Nutrition"],
+    ["knowledge_first_aid", "First Aid"],
+    ["knowledge_mechanics", "Mechanics / Auto"],
+    ["knowledge_navigation", "Navigation / Orienteering"],
+    ["knowledge_cooking", "Cooking"],
+    ["knowledge_home_repair", "Home Repair / DIY"],
+    ["knowledge_leadership", "Leadership"],
+    ["knowledge_tech", "Tech / Coding"],
+  ].map(
+    ([id, label]): NumberFactor => ({
+      kind: "number",
+      id,
+      label: `Knowledge — ${label}`,
+      unit: "/10",
+      weight: 0.006,
+      domain: {
+        min: 1,
+        max: 10,
+        better: "higher",
+      },
+    })
+  ),
+
+  /* ACTIVITIES */
+
+  {
+    kind: "checklist",
+    id: "activities",
+    label: "Activities Completed",
+    weight: 0.1,
+    cap: 100,
+    items: [
+      { id: "hyrox", label: "HYROX", points: 20 },
+      { id: "spartan", label: "Spartan Race", points: 15 },
+      { id: "marathon", label: "Marathon", points: 20 },
+      { id: "triathlon", label: "Triathlon", points: 20 },
+      { id: "murph", label: "Murph", points: 15 },
+      { id: "tough_mudder", label: "Tough Mudder", points: 15 },
+
+      { id: "rock_climb", label: "Rock Climbing", points: 10 },
+      { id: "hiking", label: "Hiking", points: 5 },
+
+      { id: "surfing", label: "Surfing", points: 10 },
+      { id: "skiing", label: "Skiing", points: 10 },
+      { id: "snowboarding", label: "Snowboarding", points: 10 },
+      { id: "wakeboarding", label: "Wakeboarding", points: 10 },
+      { id: "waterskiing", label: "Water Skiing", points: 10 },
+
+      {
+        id: "snowmobiling",
+        label: "Driving a Snowmobile",
+        points: 5,
+      },
+      {
+        id: "jetski",
+        label: "Driving a Jet Ski",
+        points: 5,
+      },
+      {
+        id: "drive_atv",
+        label: "Driving an ATV",
+        points: 10,
+      },
+      {
+        id: "drive_motorcycle",
+        label: "Driving a Motorcycle",
+        points: 15,
+      },
+      {
+        id: "drive_dirtbike",
+        label: "Driving a Dirt Bike",
+        points: 10,
+      },
+
+      {
+        id: "fire_building",
+        label: "Building a Fire",
+        points: 10,
+      },
+      { id: "fishing", label: "Fishing", points: 5 },
+      {
+        id: "chopwood",
+        label: "Chopping Wood",
+        points: 5,
+      },
+
+      {
+        id: "bjj",
+        label: "Brazilian Jiu-Jitsu",
+        points: 15,
+      },
+      {
+        id: "wrestling",
+        label: "Wrestling",
+        points: 15,
+      },
+      { id: "boxing", label: "Boxing", points: 15 },
+      {
+        id: "winfight",
+        label: "Winning a Fight",
+        points: 20,
+      },
+
+      {
+        id: "shootgun",
+        label: "Shooting a Gun",
+        points: 10,
+      },
+      {
+        id: "shootbow",
+        label: "Shooting a Bow and Arrow",
+        points: 10,
+      },
+
+      { id: "golfing", label: "Golfing", points: 5 },
+      { id: "hockey", label: "Hockey", points: 10 },
+      { id: "lacrosse", label: "Lacrosse", points: 10 },
+      { id: "rugby", label: "Rugby", points: 15 },
+      {
+        id: "volleyball",
+        label: "Volleyball",
+        points: 5,
+      },
+      {
+        id: "football",
+        label: "Football",
+        points: 15,
+      },
+
+      {
+        id: "powerlifting_meet",
+        label: "Powerlifting Meet",
+        points: 20,
+      },
+      {
+        id: "motocross",
+        label: "Motocross",
+        points: 15,
+      },
+
+      {
+        id: "shotgun",
+        label: "Shotgun a Beer",
+        points: 5,
+      },
+      {
+        id: "baby_making",
+        label: "Baby Making",
+        points: 15,
+      },
+    ],
+  },
+];
+
+/* =========================================================
+   STYLES
+   ========================================================= */
+
+const pageWrap: React.CSSProperties = {
+  maxWidth: 1120,
+  margin: "0 auto",
+  padding: "24px 18px 70px",
+  position: "relative",
+  zIndex: 2,
+  fontFamily: "Arial, Helvetica, sans-serif",
+};
+
+const card: React.CSSProperties = {
+  background:
+    "linear-gradient(145deg, rgba(8,12,18,.94), rgba(15,23,42,.90))",
+  border: "1px solid rgba(255,255,255,.13)",
+  borderRadius: 16,
+  padding: 20,
+  boxShadow: "0 14px 40px rgba(0,0,0,.35)",
 };
 
 const inputStyle: React.CSSProperties = {
-  border: "1px solid #475569",
-  borderRadius: 8,
-  padding: "9px 11px",
-  fontSize: 14,
   width: "100%",
-  background: "#0f172a",
-  color: "#f8fafc",
   boxSizing: "border-box",
-};
-
-const buttonStyle: React.CSSProperties = {
-  borderRadius: 10,
-  padding: "10px 14px",
+  background: "#0b1220",
+  color: "#f8fafc",
+  border: "1px solid #475569",
+  borderRadius: 9,
+  padding: "10px 11px",
   fontSize: 14,
+  outline: "none",
+};
+
+const buttonBase: React.CSSProperties = {
+  borderRadius: 10,
+  padding: "10px 15px",
+  fontSize: 14,
+  fontWeight: 800,
   cursor: "pointer",
-  fontWeight: 700,
-  textDecoration: "none",
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
 };
 
-const buttonPrimary: React.CSSProperties = {
-  ...buttonStyle,
-  background: "#dc2626",
-  color: "#fff",
+const primaryButton: React.CSSProperties = {
+  ...buttonBase,
   border: "1px solid #ef4444",
+  background: "#dc2626",
+  color: "white",
 };
 
-const buttonGhost: React.CSSProperties = {
-  ...buttonStyle,
+const lightButton: React.CSSProperties = {
+  ...buttonBase,
   border: "1px solid #e2e8f0",
   background: "#f8fafc",
   color: "#020617",
 };
 
-const buttonDanger: React.CSSProperties = {
-  ...buttonStyle,
-  border: "1px solid #7f1d1d",
+const darkButton: React.CSSProperties = {
+  ...buttonBase,
+  border: "1px solid #475569",
+  background: "#111827",
+  color: "#f8fafc",
+};
+
+const dangerButton: React.CSSProperties = {
+  ...buttonBase,
+  border: "1px solid #991b1b",
   background: "#450a0a",
   color: "#fecaca",
 };
 
-const labelText: React.CSSProperties = {
+const labelStyle: React.CSSProperties = {
   fontSize: 12,
-  color: "#f1f5f9",
-  fontWeight: 700,
+  fontWeight: 800,
+  color: "#e2e8f0",
   marginBottom: 5,
 };
 
-const helperText: React.CSSProperties = {
+const helperStyle: React.CSSProperties = {
   fontSize: 11,
   color: "#94a3b8",
+  marginTop: 4,
 };
 
 const sectionTitle: React.CSSProperties = {
-  fontSize: 20,
+  margin: 0,
+  fontSize: 21,
   fontWeight: 900,
-  margin: "0 0 4px",
-  color: "#f8fafc",
+  letterSpacing: "-.3px",
 };
 
 const sectionDescription: React.CSSProperties = {
-  fontSize: 12,
+  marginTop: 5,
+  marginBottom: 17,
   color: "#94a3b8",
-  marginBottom: 16,
+  fontSize: 12,
+  lineHeight: 1.5,
 };
 
-/* =========================================
+/* =========================================================
    STORAGE
-   ========================================= */
+   ========================================================= */
 
 function loadUsers(): Record<string, UserRecord> {
+  if (typeof window === "undefined") return {};
+
   try {
     return JSON.parse(localStorage.getItem(USERS_KEY) || "{}");
   } catch {
@@ -115,31 +579,36 @@ function loadUsers(): Record<string, UserRecord> {
   }
 }
 
-function saveUsers(users: Record<string, UserRecord>) {
+function persistUsers(users: Record<string, UserRecord>) {
   try {
     localStorage.setItem(USERS_KEY, JSON.stringify(users));
   } catch (error) {
     console.error(error);
+
     alert(
-      "The browser could not save your data. Large uploaded photos can exceed browser storage."
+      "Your browser could not save the data. Uploaded photos may be using too much browser storage."
     );
   }
 }
 
-/* =========================================
-   HELPERS
-   ========================================= */
+/* =========================================================
+   AUTH / FILE HELPERS
+   ========================================================= */
 
-async function sha256(text: string): Promise<string> {
-  const encoded = new TextEncoder().encode(text);
-  const buffer = await crypto.subtle.digest("SHA-256", encoded);
+async function sha256(text: string) {
+  const bytes = new TextEncoder().encode(text);
+
+  const buffer = await crypto.subtle.digest(
+    "SHA-256",
+    bytes
+  );
 
   return Array.from(new Uint8Array(buffer))
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
 }
 
-async function fileToDataURL(file: File): Promise<string> {
+function fileToDataURL(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
 
@@ -150,24 +619,208 @@ async function fileToDataURL(file: File): Promise<string> {
   });
 }
 
-function getFactor(id: string) {
-  return FACTORS.find((f) => f.id === id);
+/* =========================================================
+   SCORING
+   ========================================================= */
+
+function clamp01(value: number) {
+  return Math.max(0, Math.min(1, value));
+}
+
+function parseMile(value: any) {
+  if (
+    typeof value === "string" &&
+    value.includes(".")
+  ) {
+    const [minutesText, secondsText] =
+      value.split(".");
+
+    const minutes = parseInt(
+      minutesText || "0",
+      10
+    );
+
+    const seconds = parseInt(
+      secondsText || "0",
+      10
+    );
+
+    if (
+      Number.isFinite(minutes) &&
+      Number.isFinite(seconds)
+    ) {
+      return minutes * 60 + seconds;
+    }
+  }
+
+  const numeric = Number(value);
+
+  return Number.isFinite(numeric)
+    ? numeric
+    : NaN;
+}
+
+function factorScore(
+  factor: Factor,
+  answers: Record<string, any>
+) {
+  const value = answers[factor.id];
+
+  if (factor.kind === "select") {
+    if (
+      value === "" ||
+      value === undefined ||
+      value === null
+    ) {
+      return 0;
+    }
+
+    const numeric = Number(value);
+
+    return Number.isFinite(numeric)
+      ? Math.max(0, Math.min(100, numeric))
+      : 0;
+  }
+
+  if (factor.kind === "checklist") {
+    const selections =
+      value && typeof value === "object"
+        ? value
+        : {};
+
+    const points = factor.items.reduce(
+      (total, item) =>
+        total +
+        (selections[item.id]
+          ? item.points
+          : 0),
+      0
+    );
+
+    return Math.round(
+      clamp01(points / factor.cap) * 100
+    );
+  }
+
+  if (
+    value === "" ||
+    value === undefined ||
+    value === null
+  ) {
+    return 0;
+  }
+
+  let numeric =
+    factor.id === "mile_time"
+      ? parseMile(value)
+      : Number(value);
+
+  if (!Number.isFinite(numeric)) return 0;
+
+  const { min, max, better } =
+    factor.domain;
+
+  numeric = Math.max(
+    min,
+    Math.min(max, numeric)
+  );
+
+  const progress =
+    (numeric - min) / (max - min);
+
+  if (better === "higher") {
+    return Math.round(
+      clamp01(progress) * 100
+    );
+  }
+
+  return Math.round(
+    (1 - clamp01(progress)) * 100
+  );
+}
+
+function calculateScore(
+  answers: Record<string, any> = {}
+) {
+  const totalWeight = FACTORS.reduce(
+    (total, factor) =>
+      total + factor.weight,
+    0
+  );
+
+  const weighted = FACTORS.reduce(
+    (total, factor) =>
+      total +
+      factorScore(factor, answers) *
+        factor.weight,
+    0
+  );
+
+  if (!totalWeight) return 0;
+
+  return Math.round(
+    (weighted / totalWeight) * 10
+  );
+}
+
+function levelFor(score: number) {
+  if (score >= 900) {
+    return {
+      name: "APEX",
+      description: "Elite presence.",
+    };
+  }
+
+  if (score >= 750) {
+    return {
+      name: "ALPHA",
+      description: "High performer.",
+    };
+  }
+
+  if (score >= 500) {
+    return {
+      name: "CONTENDER",
+      description: "Solid foundation.",
+    };
+  }
+
+  if (score >= 250) {
+    return {
+      name: "RISING",
+      description: "Early gains.",
+    };
+  }
+
+  return {
+    name: "GETTING STARTED",
+    description: "Stack small wins.",
+  };
 }
 
 function getFactors(ids: string[]) {
   return ids
-    .map((id) => getFactor(id))
+    .map((id) =>
+      FACTORS.find(
+        (factor) => factor.id === id
+      )
+    )
     .filter(Boolean) as Factor[];
 }
 
-/* =========================================
-   NUMBER INPUT
+/* =========================================================
+   INPUT COMPONENT
+   ========================================================= */
 
-   Defined outside Page so React doesn't
-   remount the input every time you type.
-   ========================================= */
-
-function NumberInput(props: {
+function NumberInput({
+  value,
+  onChange,
+  min,
+  max,
+  step = 0.5,
+  unit,
+  disabled = false,
+}: {
   value: any;
   onChange: (value: string) => void;
   min: number;
@@ -176,35 +829,29 @@ function NumberInput(props: {
   unit?: string;
   disabled?: boolean;
 }) {
-  const {
-    value,
-    onChange,
-    min,
-    max,
-    step = 0.5,
-    unit,
-    disabled = false,
-  } = props;
-
   return (
     <div>
       <input
         type="number"
         value={value ?? ""}
-        onChange={(e) => onChange(e.target.value)}
         min={min}
         max={max}
         step={step}
         disabled={disabled}
+        onChange={(event) =>
+          onChange(event.target.value)
+        }
         style={{
           ...inputStyle,
-          opacity: disabled ? 0.6 : 1,
-          cursor: disabled ? "not-allowed" : "text",
+          opacity: disabled ? 0.55 : 1,
+          cursor: disabled
+            ? "not-allowed"
+            : "text",
         }}
       />
 
       {unit && (
-        <div style={{ ...helperText, marginTop: 4 }}>
+        <div style={helperStyle}>
           {unit} • Range {min}–{max}
         </div>
       )}
@@ -212,18 +859,24 @@ function NumberInput(props: {
   );
 }
 
-/* =========================================
-   FIELD COMPONENT
-   ========================================= */
+/* =========================================================
+   FACTOR FIELD
+   ========================================================= */
 
-function FactorField(props: {
+function FactorField({
+  factor,
+  answers,
+  updateAnswer,
+  adminMode,
+}: {
   factor: Factor;
   answers: Record<string, any>;
-  updateAnswer: (id: string, value: any) => void;
-  isAdmin: boolean;
+  updateAnswer: (
+    id: string,
+    value: any
+  ) => void;
+  adminMode: boolean;
 }) {
-  const { factor, answers, updateAnswer, isAdmin } = props;
-
   if (factor.kind === "checklist") {
     return null;
   }
@@ -231,26 +884,40 @@ function FactorField(props: {
   if (factor.kind === "select") {
     return (
       <div>
-        <div style={labelText}>{factor.label}</div>
+        <div style={labelStyle}>
+          {factor.label}
+        </div>
 
         <select
+          value={
+            answers[factor.id] ?? ""
+          }
+          onChange={(event) =>
+            updateAnswer(
+              factor.id,
+              event.target.value
+            )
+          }
           style={inputStyle}
-          value={answers[factor.id] ?? ""}
-          onChange={(e) => updateAnswer(factor.id, e.target.value)}
         >
-          <option value="">Select...</option>
+          <option value="">
+            Select...
+          </option>
 
-          {factor.options.map((option) => (
-            <option key={option.label} value={option.value}>
-              {option.label}
-            </option>
-          ))}
+          {factor.options.map(
+            (option) => (
+              <option
+                key={option.label}
+                value={option.value}
+              >
+                {option.label}
+              </option>
+            )
+          )}
         </select>
       </div>
     );
   }
-
-  const disabled = !!factor.readOnly && !isAdmin;
 
   let step = 0.5;
 
@@ -258,9 +925,11 @@ function FactorField(props: {
     factor.id === "workout_days" ||
     factor.id === "children_count" ||
     factor.id === "hit_number" ||
-    factor.id.startsWith("knowledge_") ||
     factor.id === "alpha_look" ||
-    factor.id === "alpha_bonus"
+    factor.id === "alpha_bonus" ||
+    factor.id.startsWith(
+      "knowledge_"
+    )
   ) {
     step = 1;
   }
@@ -269,16 +938,28 @@ function FactorField(props: {
     step = 0.01;
   }
 
+  const disabled =
+    !!factor.adminOnly && !adminMode;
+
   return (
     <div>
-      <div style={labelText}>
+      <div style={labelStyle}>
         {factor.label}
-        {factor.readOnly && !isAdmin ? " • Admin rated" : ""}
+        {factor.adminOnly &&
+          !adminMode &&
+          " • Admin rated"}
       </div>
 
       <NumberInput
-        value={answers[factor.id] ?? ""}
-        onChange={(value) => updateAnswer(factor.id, value)}
+        value={
+          answers[factor.id] ?? ""
+        }
+        onChange={(value) =>
+          updateAnswer(
+            factor.id,
+            value
+          )
+        }
         min={factor.domain.min}
         max={factor.domain.max}
         step={step}
@@ -289,40 +970,48 @@ function FactorField(props: {
   );
 }
 
-/* =========================================
-   SECTION
-   ========================================= */
+/* =========================================================
+   FACTOR SECTION
+   ========================================================= */
 
-function FactorSection(props: {
+function FactorSection({
+  title,
+  description,
+  factors,
+  answers,
+  updateAnswer,
+  adminMode,
+}: {
   title: string;
   description?: string;
   factors: Factor[];
   answers: Record<string, any>;
-  updateAnswer: (id: string, value: any) => void;
-  isAdmin: boolean;
+  updateAnswer: (
+    id: string,
+    value: any
+  ) => void;
+  adminMode: boolean;
 }) {
-  const {
-    title,
-    description,
-    factors,
-    answers,
-    updateAnswer,
-    isAdmin,
-  } = props;
-
   return (
-    <section style={box}>
-      <h2 style={sectionTitle}>{title}</h2>
+    <section style={card}>
+      <h2 style={sectionTitle}>
+        {title}
+      </h2>
 
       {description && (
-        <div style={sectionDescription}>{description}</div>
+        <div
+          style={sectionDescription}
+        >
+          {description}
+        </div>
       )}
 
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))",
-          gap: 14,
+          gridTemplateColumns:
+            "repeat(auto-fit, minmax(215px, 1fr))",
+          gap: 15,
         }}
       >
         {factors.map((factor) => (
@@ -330,8 +1019,10 @@ function FactorSection(props: {
             key={factor.id}
             factor={factor}
             answers={answers}
-            updateAnswer={updateAnswer}
-            isAdmin={isAdmin}
+            updateAnswer={
+              updateAnswer
+            }
+            adminMode={adminMode}
           />
         ))}
       </div>
@@ -339,329 +1030,131 @@ function FactorSection(props: {
   );
 }
 
-/* =========================================
-   MAIN PAGE
-   ========================================= */
+/* =========================================================
+   APP
+   ========================================================= */
 
 export default function Page() {
-  const [users, setUsers] = useState<Record<string, UserRecord>>({});
+  const [users, setUsers] =
+    useState<
+      Record<string, UserRecord>
+    >({});
 
-  const [loaded, setLoaded] = useState(false);
+  const [storageLoaded, setStorageLoaded] =
+    useState(false);
 
-  const [email, setEmail] = useState("");
-  const [pwd, setPwd] = useState("");
-  const [isLoginMode, setIsLoginMode] = useState(true);
+  const [currentEmail, setCurrentEmail] =
+    useState<string | null>(null);
 
-  const [currentEmail, setCurrentEmail] = useState<string | null>(null);
+  const [email, setEmail] =
+    useState("");
 
-  const [name, setName] = useState("");
-  const [profilePhoto, setProfilePhoto] = useState<string | undefined>();
-  const [assessmentPhoto, setAssessmentPhoto] =
-    useState<string | undefined>();
+  const [password, setPassword] =
+    useState("");
 
-  const [extraAlphaPhotos, setExtraAlphaPhotos] = useState<string[]>([]);
+  const [
+    loginMode,
+    setLoginMode,
+  ] = useState(true);
 
-  const [answers, setAnswers] = useState<Record<string, any>>({});
+  const [view, setView] =
+    useState<"profile" | "leaderboard">(
+      "profile"
+    );
 
-  /* ---------- Load browser storage ---------- */
+  const [name, setName] =
+    useState("");
+
+  const [
+    profilePhoto,
+    setProfilePhoto,
+  ] = useState<string>();
+
+  const [
+    assessmentPhoto,
+    setAssessmentPhoto,
+  ] = useState<string>();
+
+  const [
+    bonusPhotos,
+    setBonusPhotos,
+  ] = useState<string[]>([]);
+
+  const [answers, setAnswers] =
+    useState<Record<string, any>>(
+      {}
+    );
+
+  /* ADMIN TEST MODE
+     For this testing build, the first
+     account created becomes the admin.
+  */
+
+  const currentUser =
+    currentEmail
+      ? users[currentEmail]
+      : undefined;
+
+  const adminMode =
+    !!currentUser?.isAdmin;
+
+  /* LOAD STORAGE */
 
   useEffect(() => {
     setUsers(loadUsers());
-    setLoaded(true);
+    setStorageLoaded(true);
   }, []);
 
-  useEffect(() => {
-    if (!loaded) return;
-    saveUsers(users);
-  }, [users, loaded]);
-
-  const currentUser = currentEmail
-    ? users[currentEmail]
-    : undefined;
-
-  const isAdmin = !!currentUser?.isAdmin;
-
-  /* ---------- Load selected account ---------- */
+  /* SAVE STORAGE */
 
   useEffect(() => {
-    if (!currentEmail) {
-      setName("");
-      setProfilePhoto(undefined);
-      setAssessmentPhoto(undefined);
-      setExtraAlphaPhotos([]);
-      setAnswers({});
-      return;
-    }
+    if (!storageLoaded) return;
+
+    persistUsers(users);
+  }, [users, storageLoaded]);
+
+  /* LOAD CURRENT PROFILE */
+
+  useEffect(() => {
+    if (!currentEmail) return;
 
     const user = users[currentEmail];
 
     if (!user) return;
 
-    setName(user.profile?.name || "");
-    setProfilePhoto(user.profile?.profilePhoto);
-    setAssessmentPhoto(user.profile?.assessmentPhoto);
-    setExtraAlphaPhotos(user.profile?.extraAlphaPhotos || []);
-    setAnswers(user.answers || {});
+    setName(
+      user.profile?.name || ""
+    );
+
+    setProfilePhoto(
+      user.profile?.profilePhoto
+    );
+
+    setAssessmentPhoto(
+      user.profile
+        ?.assessmentPhoto
+    );
+
+    setBonusPhotos(
+      user.profile
+        ?.extraAlphaPhotos || []
+    );
+
+    setAnswers(
+      user.answers || {}
+    );
   }, [currentEmail]);
 
-  /* ---------- Score ---------- */
+  /* SCORE */
 
   const score = useMemo(
-    () => calculateAlphaScore(answers),
+    () => calculateScore(answers),
     [answers]
   );
 
   const level = levelFor(score);
 
-  /* ---------- Authentication ---------- */
-
-  async function handleAuth() {
-    const cleanEmail = email.trim().toLowerCase();
-
-    if (!cleanEmail || !pwd) {
-      alert("Enter an email and password.");
-      return;
-    }
-
-    const passwordHash = await sha256(pwd);
-
-    if (isLoginMode) {
-      const user = users[cleanEmail];
-
-      if (!user) {
-        alert("No account found. Create one instead.");
-        return;
-      }
-
-      if (user.passwordHash !== passwordHash) {
-        alert("Wrong password.");
-        return;
-      }
-
-      setCurrentEmail(cleanEmail);
-      setPwd("");
-      return;
-    }
-
-    if (users[cleanEmail]) {
-      alert("That account already exists. Try logging in.");
-      return;
-    }
-
-    const newUser: UserRecord = {
-      passwordHash,
-      createdAt: Date.now(),
-      profile: {},
-      answers: {},
-    };
-
-    setUsers((previous) => ({
-      ...previous,
-      [cleanEmail]: newUser,
-    }));
-
-    setCurrentEmail(cleanEmail);
-    setPwd("");
-  }
-
-  function handleLogout() {
-    setCurrentEmail(null);
-    setEmail("");
-    setPwd("");
-    setName("");
-    setProfilePhoto(undefined);
-    setAssessmentPhoto(undefined);
-    setExtraAlphaPhotos([]);
-    setAnswers({});
-  }
-
-  /* ---------- Answers ---------- */
-
-  function updateAnswer(id: string, value: any) {
-    setAnswers((previous) => ({
-      ...previous,
-      [id]: value,
-    }));
-  }
-
-  /* ---------- Save ---------- */
-
-  function handleSave() {
-    if (!currentEmail) return;
-
-    setUsers((previous) => {
-      const existing = previous[currentEmail];
-
-      return {
-        ...previous,
-
-        [currentEmail]: {
-          ...existing,
-
-          profile: {
-            name,
-            profilePhoto,
-            assessmentPhoto,
-            extraAlphaPhotos,
-          },
-
-          answers,
-
-          isAdmin: existing?.isAdmin,
-        },
-      };
-    });
-
-    alert("Profile saved.");
-  }
-
-  /* ---------- Reset answers ---------- */
-
-  function handleReset() {
-    const confirmed = window.confirm(
-      "Reset all of your Alpha Status answers? Your account will remain."
-    );
-
-    if (!confirmed) return;
-
-    setAnswers({});
-  }
-
-  /* ---------- Photos ---------- */
-
-  async function handleProfilePhoto(file?: File) {
-    if (!file) return;
-
-    const data = await fileToDataURL(file);
-    setProfilePhoto(data);
-  }
-
-  async function handleAssessmentPhoto(file?: File) {
-    if (!file) return;
-
-    const data = await fileToDataURL(file);
-    setAssessmentPhoto(data);
-  }
-
-  async function handleBonusPhotos(files: FileList | null) {
-    if (!files?.length) return;
-
-    const converted: string[] = [];
-
-    for (const file of Array.from(files)) {
-      converted.push(await fileToDataURL(file));
-    }
-
-    setExtraAlphaPhotos((previous) => [
-      ...previous,
-      ...converted,
-    ]);
-  }
-
-  function removeBonusPhoto(index: number) {
-    setExtraAlphaPhotos((previous) =>
-      previous.filter((_, i) => i !== index)
-    );
-  }
-
-  /* ---------- CSV ---------- */
-
-  function exportCSV() {
-    const factorIds = FACTORS.map((factor) => factor.id);
-
-    const header = [
-      "email",
-      "name",
-      "admin",
-      "created",
-      "score1000",
-      "level",
-      ...factorIds,
-    ];
-
-    const rows: string[][] = [header];
-
-    Object.entries(users).forEach(([userEmail, user]) => {
-      const userAnswers = user.answers || {};
-      const userScore = calculateAlphaScore(userAnswers);
-
-      const values = factorIds.map((id) => {
-        const value = userAnswers[id];
-
-        if (value && typeof value === "object") {
-          return Object.entries(value)
-            .filter(([, checked]) => !!checked)
-            .map(([key]) => key)
-            .join(";");
-        }
-
-        return value === undefined ? "" : String(value);
-      });
-
-      rows.push([
-        userEmail,
-        user.profile?.name || "",
-        user.isAdmin ? "1" : "0",
-        new Date(user.createdAt).toISOString(),
-        String(userScore),
-        levelFor(userScore).name,
-        ...values,
-      ]);
-    });
-
-    const csv = rows
-      .map((row) =>
-        row
-          .map(
-            (cell) =>
-              `"${String(cell).replace(/"/g, '""')}"`
-          )
-          .join(",")
-      )
-      .join("\n");
-
-    const blob = new Blob([csv], {
-      type: "text/csv;charset=utf-8",
-    });
-
-    const url = URL.createObjectURL(blob);
-
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = `alpha_status_${Date.now()}.csv`;
-
-    document.body.appendChild(anchor);
-    anchor.click();
-    anchor.remove();
-
-    URL.revokeObjectURL(url);
-  }
-
-  /* ---------- Activities ---------- */
-
-  const activityFactor = FACTORS.find(
-    (factor) => factor.kind === "checklist" && factor.id === "activities"
-  );
-
-  const activities =
-    activityFactor?.kind === "checklist"
-      ? activityFactor.items
-      : [];
-
-  const activityAnswers =
-    answers.activities &&
-    typeof answers.activities === "object"
-      ? answers.activities
-      : {};
-
-  function toggleActivity(id: string) {
-    updateAnswer("activities", {
-      ...activityAnswers,
-      [id]: !activityAnswers[id],
-    });
-  }
-
-  /* ---------- Groups ---------- */
+  /* GROUPS */
 
   const strength = getFactors([
     "max_bench",
@@ -679,14 +1172,15 @@ export default function Page() {
     "workout_days",
   ]);
 
-  const body = getFactors([
-    "chest_size",
-    "arm_size",
-    "quad_size",
-    "shoulder_size",
-    "height",
-    "body_fat",
-  ]);
+  const anthropometrics =
+    getFactors([
+      "chest_size",
+      "arm_size",
+      "quad_size",
+      "shoulder_size",
+      "height",
+      "body_fat",
+    ]);
 
   const appearance = getFactors([
     "shoe_size",
@@ -696,79 +1190,474 @@ export default function Page() {
     "hand_size",
   ]);
 
-  const knowledge = FACTORS.filter((factor) =>
-    factor.id.startsWith("knowledge_")
-  );
+  const knowledge =
+    FACTORS.filter((factor) =>
+      factor.id.startsWith(
+        "knowledge_"
+      )
+    );
 
   const life = getFactors([
     "children_count",
     "hit_number",
   ]);
 
-  const adminFactors = getFactors([
-    "alpha_look",
-    "alpha_bonus",
-  ]);
+  const adminFactors =
+    getFactors([
+      "alpha_look",
+      "alpha_bonus",
+    ]);
 
-  /* =========================================
-     PAGE
-     ========================================= */
+  const activityFactor =
+    FACTORS.find(
+      (factor) =>
+        factor.kind ===
+          "checklist" &&
+        factor.id ===
+          "activities"
+    );
 
-  return (
-    <main
-      style={{
-        minHeight: "100vh",
-        background: "#020617",
-        color: "#f8fafc",
-        position: "relative",
-      }}
-    >
-      {/* BACKGROUND */}
+  const activities =
+    activityFactor?.kind ===
+    "checklist"
+      ? activityFactor.items
+      : [];
 
-      <div
+  const activityAnswers =
+    answers.activities &&
+    typeof answers.activities ===
+      "object"
+      ? answers.activities
+      : {};
+
+  /* AUTH */
+
+  async function authenticate() {
+    const cleanEmail =
+      email
+        .trim()
+        .toLowerCase();
+
+    if (
+      !cleanEmail ||
+      !password
+    ) {
+      alert(
+        "Enter an email and password."
+      );
+      return;
+    }
+
+    const hash =
+      await sha256(password);
+
+    if (loginMode) {
+      const user =
+        users[cleanEmail];
+
+      if (!user) {
+        alert(
+          "No account found. Create one instead."
+        );
+        return;
+      }
+
+      if (
+        user.passwordHash !==
+        hash
+      ) {
+        alert(
+          "Incorrect password."
+        );
+        return;
+      }
+
+      setCurrentEmail(
+        cleanEmail
+      );
+
+      setPassword("");
+      setView("profile");
+
+      return;
+    }
+
+    if (users[cleanEmail]) {
+      alert(
+        "That account already exists."
+      );
+      return;
+    }
+
+    const firstAccount =
+      Object.keys(users).length ===
+      0;
+
+    const newUser: UserRecord = {
+      passwordHash: hash,
+      createdAt: Date.now(),
+      isAdmin: firstAccount,
+      profile: {},
+      answers: {},
+    };
+
+    setUsers((previous) => ({
+      ...previous,
+      [cleanEmail]:
+        newUser,
+    }));
+
+    setCurrentEmail(
+      cleanEmail
+    );
+
+    setName("");
+    setProfilePhoto(undefined);
+    setAssessmentPhoto(
+      undefined
+    );
+    setBonusPhotos([]);
+    setAnswers({});
+    setPassword("");
+    setView("profile");
+  }
+
+  function logout() {
+    setCurrentEmail(null);
+    setEmail("");
+    setPassword("");
+    setName("");
+    setProfilePhoto(undefined);
+    setAssessmentPhoto(
+      undefined
+    );
+    setBonusPhotos([]);
+    setAnswers({});
+    setView("profile");
+  }
+
+  /* ANSWERS */
+
+  function updateAnswer(
+    id: string,
+    value: any
+  ) {
+    setAnswers((previous) => ({
+      ...previous,
+      [id]: value,
+    }));
+  }
+
+  function toggleActivity(
+    id: string
+  ) {
+    updateAnswer(
+      "activities",
+      {
+        ...activityAnswers,
+        [id]:
+          !activityAnswers[id],
+      }
+    );
+  }
+
+  /* PHOTOS */
+
+  async function uploadProfilePhoto(
+    file?: File
+  ) {
+    if (!file) return;
+
+    const url =
+      await fileToDataURL(file);
+
+    setProfilePhoto(url);
+  }
+
+  async function uploadAssessmentPhoto(
+    file?: File
+  ) {
+    if (!file) return;
+
+    const url =
+      await fileToDataURL(file);
+
+    setAssessmentPhoto(url);
+  }
+
+  async function uploadBonusPhotos(
+    files: FileList | null
+  ) {
+    if (!files?.length) return;
+
+    const converted: string[] =
+      [];
+
+    for (const file of Array.from(
+      files
+    )) {
+      converted.push(
+        await fileToDataURL(file)
+      );
+    }
+
+    setBonusPhotos(
+      (previous) => [
+        ...previous,
+        ...converted,
+      ]
+    );
+  }
+
+  function removeBonusPhoto(
+    index: number
+  ) {
+    setBonusPhotos(
+      (previous) =>
+        previous.filter(
+          (_, i) => i !== index
+        )
+    );
+  }
+
+  /* SAVE PROFILE */
+
+  function saveProfile() {
+    if (!currentEmail) return;
+
+    setUsers((previous) => {
+      const existing =
+        previous[currentEmail];
+
+      return {
+        ...previous,
+
+        [currentEmail]: {
+          ...existing,
+
+          profile: {
+            name,
+            profilePhoto,
+            assessmentPhoto,
+            extraAlphaPhotos:
+              bonusPhotos,
+          },
+
+          answers,
+
+          isAdmin:
+            existing?.isAdmin,
+        },
+      };
+    });
+
+    alert("Profile saved.");
+  }
+
+  /* RESET */
+
+  function resetAnswers() {
+    const confirmed =
+      window.confirm(
+        "Reset all Alpha Status answers? Your account and photos will remain."
+      );
+
+    if (!confirmed) return;
+
+    setAnswers({});
+  }
+
+  /* CSV */
+
+  function exportCSV() {
+    const factorIds =
+      FACTORS.map(
+        (factor) =>
+          factor.id
+      );
+
+    const rows: string[][] = [
+      [
+        "email",
+        "name",
+        "admin",
+        "score1000",
+        "level",
+        ...factorIds,
+      ],
+    ];
+
+    Object.entries(users).forEach(
+      ([userEmail, user]) => {
+        const userAnswers =
+          user.answers || {};
+
+        const userScore =
+          calculateScore(
+            userAnswers
+          );
+
+        const factorValues =
+          factorIds.map((id) => {
+            const value =
+              userAnswers[id];
+
+            if (
+              value &&
+              typeof value ===
+                "object"
+            ) {
+              return Object.entries(
+                value
+              )
+                .filter(
+                  ([, checked]) =>
+                    !!checked
+                )
+                .map(
+                  ([key]) => key
+                )
+                .join(";");
+            }
+
+            return value ===
+              undefined
+              ? ""
+              : String(value);
+          });
+
+        rows.push([
+          userEmail,
+          user.profile?.name ||
+            "",
+          user.isAdmin
+            ? "1"
+            : "0",
+          String(userScore),
+          levelFor(
+            userScore
+          ).name,
+          ...factorValues,
+        ]);
+      }
+    );
+
+    const csv = rows
+      .map((row) =>
+        row
+          .map(
+            (cell) =>
+              `"${String(
+                cell
+              ).replace(
+                /"/g,
+                '""'
+              )}"`
+          )
+          .join(",")
+      )
+      .join("\n");
+
+    const blob =
+      new Blob([csv], {
+        type: "text/csv;charset=utf-8",
+      });
+
+    const url =
+      URL.createObjectURL(blob);
+
+    const link =
+      document.createElement("a");
+
+    link.href = url;
+
+    link.download =
+      `alpha_status_${Date.now()}.csv`;
+
+    document.body.appendChild(
+      link
+    );
+
+    link.click();
+    link.remove();
+
+    URL.revokeObjectURL(url);
+  }
+
+  /* LEADERBOARD */
+
+  const leaderboard =
+    useMemo(() => {
+      return Object.entries(users)
+        .map(
+          ([userEmail, user]) => {
+            const userScore =
+              calculateScore(
+                user.answers || {}
+              );
+
+            return {
+              email: userEmail,
+              name:
+                user.profile?.name ||
+                userEmail,
+              photo:
+                user.profile
+                  ?.profilePhoto,
+              score: userScore,
+              level:
+                levelFor(
+                  userScore
+                ).name,
+            };
+          }
+        )
+        .sort(
+          (a, b) =>
+            b.score - a.score
+        );
+    }, [users]);
+
+  /* =========================================================
+     LOGIN SCREEN
+     ========================================================= */
+
+  if (!currentEmail) {
+    return (
+      <main
         style={{
-          position: "fixed",
-          inset: 0,
-          backgroundImage: "url('/alpha-hero.png')",
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-          opacity: 0.28,
-          zIndex: 0,
-          pointerEvents: "none",
+          minHeight: "100vh",
+          background: "#020617",
+          color: "#f8fafc",
+          position: "relative",
         }}
-      />
+      >
+        <Background />
 
-      <div
-        style={{
-          position: "fixed",
-          inset: 0,
-          background:
-            "linear-gradient(to bottom, rgba(2,6,23,.25), rgba(2,6,23,.92))",
-          zIndex: 0,
-          pointerEvents: "none",
-        }}
-      />
+        <div style={pageWrap}>
+          <div
+            style={{
+              textAlign: "center",
+              paddingTop: 45,
+            }}
+          >
+            <div
+              style={{
+                fontSize: 12,
+                letterSpacing: 5,
+                fontWeight: 900,
+                color: "#ef4444",
+              }}
+            >
+              PROVE IT
+            </div>
 
-      <div style={pageWrap}>
-        {/* HEADER */}
-
-        <header
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            gap: 16,
-            flexWrap: "wrap",
-            marginBottom: 24,
-          }}
-        >
-          <div>
             <h1
               style={{
-                fontSize: 32,
+                fontSize: 48,
+                margin: "8px 0 5px",
                 fontWeight: 950,
-                margin: 0,
-                letterSpacing: -1,
+                letterSpacing: -2,
               }}
             >
               ALPHA STATUS
@@ -777,62 +1666,29 @@ export default function Page() {
             <div
               style={{
                 color: "#cbd5e1",
-                fontSize: 13,
-                marginTop: 4,
+                fontSize: 14,
               }}
             >
-              {currentEmail
-                ? `Signed in as ${currentEmail}`
-                : "Build your Alpha Status."}
+              Strength. Capability.
+              Presence.
             </div>
           </div>
 
-          {currentEmail && (
-            <div
-              style={{
-                display: "flex",
-                gap: 8,
-                flexWrap: "wrap",
-              }}
-            >
-              <Link href="/leaderboard" style={buttonGhost}>
-                Leaderboard
-              </Link>
-
-              <button
-                onClick={exportCSV}
-                style={buttonGhost}
-              >
-                Export CSV
-              </button>
-
-              <button
-                onClick={handleLogout}
-                style={buttonGhost}
-              >
-                Sign Out
-              </button>
-            </div>
-          )}
-        </header>
-
-        {/* LOGIN */}
-
-        {!currentEmail ? (
           <div
             style={{
-              ...box,
+              ...card,
               maxWidth: 430,
-              margin: "70px auto 0",
+              margin: "45px auto 0",
             }}
           >
             <h2
               style={{
-                margin: "0 0 6px",
-                fontSize: 24,
+                margin:
+                  "0 0 5px",
+                fontSize: 23,
               }}
             >
-              {isLoginMode
+              {loginMode
                 ? "Enter the Den"
                 : "Create Your Profile"}
             </h2>
@@ -840,11 +1696,12 @@ export default function Page() {
             <div
               style={{
                 color: "#94a3b8",
-                fontSize: 13,
+                fontSize: 12,
                 marginBottom: 18,
               }}
             >
-              Track your stats and build your Alpha Status.
+              Build your score.
+              Earn your status.
             </div>
 
             <div
@@ -855,22 +1712,30 @@ export default function Page() {
               }}
             >
               <button
-                onClick={() => setIsLoginMode(true)}
                 style={
-                  isLoginMode
-                    ? buttonPrimary
-                    : buttonGhost
+                  loginMode
+                    ? primaryButton
+                    : lightButton
+                }
+                onClick={() =>
+                  setLoginMode(
+                    true
+                  )
                 }
               >
                 Login
               </button>
 
               <button
-                onClick={() => setIsLoginMode(false)}
                 style={
-                  !isLoginMode
-                    ? buttonPrimary
-                    : buttonGhost
+                  !loginMode
+                    ? primaryButton
+                    : lightButton
+                }
+                onClick={() =>
+                  setLoginMode(
+                    false
+                  )
                 }
               >
                 Create Account
@@ -884,398 +1749,812 @@ export default function Page() {
               }}
             >
               <label>
-                <div style={labelText}>Email</div>
+                <div
+                  style={
+                    labelStyle
+                  }
+                >
+                  Email
+                </div>
 
                 <input
                   type="email"
-                  style={inputStyle}
                   value={email}
-                  onChange={(e) =>
-                    setEmail(e.target.value)
+                  style={inputStyle}
+                  onChange={(
+                    event
+                  ) =>
+                    setEmail(
+                      event.target
+                        .value
+                    )
                   }
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      handleAuth();
-                    }
-                  }}
                 />
               </label>
 
               <label>
-                <div style={labelText}>Password</div>
+                <div
+                  style={
+                    labelStyle
+                  }
+                >
+                  Password
+                </div>
 
                 <input
                   type="password"
+                  value={password}
                   style={inputStyle}
-                  value={pwd}
-                  onChange={(e) =>
-                    setPwd(e.target.value)
+                  onChange={(
+                    event
+                  ) =>
+                    setPassword(
+                      event.target
+                        .value
+                    )
                   }
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      handleAuth();
+                  onKeyDown={(
+                    event
+                  ) => {
+                    if (
+                      event.key ===
+                      "Enter"
+                    ) {
+                      authenticate();
                     }
                   }}
                 />
               </label>
 
               <button
-                onClick={handleAuth}
-                style={buttonPrimary}
+                style={
+                  primaryButton
+                }
+                onClick={
+                  authenticate
+                }
               >
-                {isLoginMode
+                {loginMode
                   ? "Sign In"
                   : "Create Account"}
               </button>
             </div>
           </div>
-        ) : (
-          /* =========================================
-             LOGGED-IN APP
-             ========================================= */
+        </div>
+      </main>
+    );
+  }
 
-          <div
-            style={{
-              display: "grid",
-              gap: 18,
-            }}
+  /* =========================================================
+     LEADERBOARD VIEW
+     ========================================================= */
+
+  if (view === "leaderboard") {
+    return (
+      <main
+        style={{
+          minHeight: "100vh",
+          background: "#020617",
+          color: "#f8fafc",
+          position: "relative",
+        }}
+      >
+        <Background />
+
+        <div style={pageWrap}>
+          <Header
+            email={
+              currentEmail
+            }
+            view={view}
+            setView={setView}
+            exportCSV={
+              exportCSV
+            }
+            logout={logout}
+          />
+
+          <section
+            style={card}
           >
-            {/* SCORE HERO */}
-
-            <section
+            <div
               style={{
-                ...box,
-                textAlign: "center",
-                padding: "28px 18px",
+                display: "flex",
+                justifyContent:
+                  "space-between",
+                alignItems:
+                  "flex-end",
+                gap: 12,
+                marginBottom: 20,
               }}
             >
-              <div
-                style={{
-                  textTransform: "uppercase",
-                  letterSpacing: 3,
-                  color: "#94a3b8",
-                  fontSize: 11,
-                  fontWeight: 800,
-                }}
-              >
-                Alpha Status
-              </div>
-
-              <div
-                style={{
-                  fontSize: 72,
-                  fontWeight: 950,
-                  lineHeight: 1,
-                  marginTop: 8,
-                }}
-              >
-                {score}
-              </div>
-
-              <div
-                style={{
-                  color: "#94a3b8",
-                  fontSize: 14,
-                }}
-              >
-                / 1000
-              </div>
-
-              <div
-                style={{
-                  fontSize: 22,
-                  fontWeight: 900,
-                  marginTop: 12,
-                }}
-              >
-                {level.name}
-              </div>
-
-              <div
-                style={{
-                  color: "#cbd5e1",
-                  fontSize: 13,
-                  marginTop: 3,
-                }}
-              >
-                {level.blurb}
-              </div>
-            </section>
-
-            {/* PROFILE */}
-
-            <section style={box}>
-              <h2 style={sectionTitle}>
-                Profile
-              </h2>
-
-              <div style={sectionDescription}>
-                Your public Alpha Status identity.
-              </div>
-
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns:
-                    "repeat(auto-fit,minmax(240px,1fr))",
-                  gap: 18,
-                }}
-              >
-                <div>
-                  <div style={labelText}>
-                    Display Name
-                  </div>
-
-                  <input
-                    style={inputStyle}
-                    value={name}
-                    onChange={(e) =>
-                      setName(e.target.value)
-                    }
-                    placeholder="Your name"
-                  />
-                </div>
-
-                <div>
-                  <div style={labelText}>
-                    Profile Photo
-                  </div>
-
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) =>
-                      handleProfilePhoto(
-                        e.target.files?.[0]
-                      )
-                    }
-                  />
-
-                  {profilePhoto && (
-                    <div
-                      style={{
-                        marginTop: 10,
-                      }}
-                    >
-                      <img
-                        src={profilePhoto}
-                        alt="Profile"
-                        style={{
-                          width: 110,
-                          height: 110,
-                          objectFit: "cover",
-                          borderRadius: 12,
-                          border:
-                            "1px solid rgba(255,255,255,.2)",
-                        }}
-                      />
-                    </div>
-                  )}
-                </div>
-              </div>
-            </section>
-
-            {/* ASSESSMENT PHOTO */}
-
-            <section style={box}>
-              <h2 style={sectionTitle}>
-                Physique Assessment
-              </h2>
-
-              <div style={sectionDescription}>
-                Add a non-explicit physique photo for
-                your profile assessment.
-              </div>
-
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) =>
-                  handleAssessmentPhoto(
-                    e.target.files?.[0]
-                  )
-                }
-              />
-
-              {assessmentPhoto && (
-                <div style={{ marginTop: 14 }}>
-                  <img
-                    src={assessmentPhoto}
-                    alt="Physique assessment"
-                    style={{
-                      width: "100%",
-                      maxWidth: 340,
-                      maxHeight: 420,
-                      objectFit: "cover",
-                      borderRadius: 12,
-                    }}
-                  />
-                </div>
-              )}
-            </section>
-
-            {/* BONUS PHOTOS */}
-
-            <section style={box}>
-              <h2 style={sectionTitle}>
-                Bonus Alpha Photos
-              </h2>
-
-              <div style={sectionDescription}>
-                Add optional fitness, outdoors,
-                competition, action or lifestyle photos.
-              </div>
-
-              <input
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={(e) =>
-                  handleBonusPhotos(e.target.files)
-                }
-              />
-
-              {extraAlphaPhotos.length > 0 && (
-                <div
+              <div>
+                <h2
                   style={{
-                    display: "grid",
-                    gridTemplateColumns:
-                      "repeat(auto-fill,minmax(140px,1fr))",
-                    gap: 12,
-                    marginTop: 16,
+                    ...sectionTitle,
+                    fontSize: 28,
                   }}
                 >
-                  {extraAlphaPhotos.map(
-                    (photo, index) => (
-                      <div key={index}>
-                        <img
-                          src={photo}
-                          alt={`Bonus ${index + 1}`}
-                          style={{
-                            width: "100%",
-                            height: 160,
-                            objectFit: "cover",
-                            borderRadius: 10,
-                          }}
-                        />
+                  LEADERBOARD
+                </h2>
 
-                        <button
-                          onClick={() =>
-                            removeBonusPhoto(index)
-                          }
-                          style={{
-                            ...buttonDanger,
-                            width: "100%",
-                            marginTop: 6,
-                            padding: "7px 8px",
-                          }}
-                        >
-                          Remove
-                        </button>
-                      </div>
-                    )
-                  )}
+                <div
+                  style={{
+                    color:
+                      "#94a3b8",
+                    fontSize: 12,
+                    marginTop: 5,
+                  }}
+                >
+                  Alpha Status
+                  rankings on this
+                  browser.
                 </div>
-              )}
-            </section>
-
-            {/* STRENGTH */}
-
-            <FactorSection
-              title="Strength"
-              description="Enter your best one-rep max lifts."
-              factors={strength}
-              answers={answers}
-              updateAnswer={updateAnswer}
-              isAdmin={isAdmin}
-            />
-
-            {/* MEMBER */}
-
-            <FactorSection
-              title="Member Measurements"
-              description="Optional numerical measurements used in your Alpha Status score."
-              factors={member}
-              answers={answers}
-              updateAnswer={updateAnswer}
-              isAdmin={isAdmin}
-            />
-
-            {/* CONDITIONING */}
-
-            <FactorSection
-              title="Conditioning"
-              description="For mile time, enter a value such as 7.30 for 7 minutes 30 seconds."
-              factors={conditioning}
-              answers={answers}
-              updateAnswer={updateAnswer}
-              isAdmin={isAdmin}
-            />
-
-            {/* BODY */}
-
-            <FactorSection
-              title="Anthropometrics"
-              factors={body}
-              answers={answers}
-              updateAnswer={updateAnswer}
-              isAdmin={isAdmin}
-            />
-
-            {/* APPEARANCE */}
-
-            <FactorSection
-              title="Appearance"
-              factors={appearance}
-              answers={answers}
-              updateAnswer={updateAnswer}
-              isAdmin={isAdmin}
-            />
-
-            {/* KNOWLEDGE */}
-
-            <FactorSection
-              title="Knowledge"
-              description="Rate each category from 1 to 10."
-              factors={knowledge}
-              answers={answers}
-              updateAnswer={updateAnswer}
-              isAdmin={isAdmin}
-            />
-
-            {/* ACTIVITIES */}
-
-            <section style={box}>
-              <h2 style={sectionTitle}>
-                Activities
-              </h2>
-
-              <div style={sectionDescription}>
-                Check the activities you've completed.
               </div>
 
               <div
                 style={{
-                  display: "grid",
-                  gridTemplateColumns:
-                    "repeat(auto-fit,minmax(220px,1fr))",
-                  gap: 8,
+                  color:
+                    "#94a3b8",
+                  fontSize: 12,
                 }}
               >
-                {activities.map((activity) => (
-                  <label
-                    key={activity.id}
+                {
+                  leaderboard.length
+                }{" "}
+                competitors
+              </div>
+            </div>
+
+            {leaderboard.length ===
+            0 ? (
+              <div
+                style={{
+                  color:
+                    "#94a3b8",
+                }}
+              >
+                No competitors
+                yet.
+              </div>
+            ) : (
+              <div
+                style={{
+                  display: "grid",
+                  gap: 10,
+                }}
+              >
+                {leaderboard.map(
+                  (person, index) => (
+                    <div
+                      key={
+                        person.email
+                      }
+                      style={{
+                        display:
+                          "flex",
+                        alignItems:
+                          "center",
+                        gap: 13,
+                        padding: 12,
+                        border:
+                          "1px solid rgba(255,255,255,.10)",
+                        borderRadius: 12,
+                        background:
+                          index === 0
+                            ? "rgba(127,29,29,.35)"
+                            : "rgba(15,23,42,.72)",
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: 36,
+                          textAlign:
+                            "center",
+                          fontSize: 22,
+                          fontWeight: 950,
+                        }}
+                      >
+                        {index +
+                          1}
+                      </div>
+
+                      <div
+                        style={{
+                          width: 58,
+                          height: 58,
+                          borderRadius: 12,
+                          overflow:
+                            "hidden",
+                          background:
+                            "#020617",
+                          border:
+                            "1px solid rgba(255,255,255,.15)",
+                          flexShrink: 0,
+                        }}
+                      >
+                        {person.photo ? (
+                          <img
+                            src={
+                              person.photo
+                            }
+                            alt={
+                              person.name
+                            }
+                            style={{
+                              width:
+                                "100%",
+                              height:
+                                "100%",
+                              objectFit:
+                                "cover",
+                            }}
+                          />
+                        ) : (
+                          <div
+                            style={{
+                              height:
+                                "100%",
+                              display:
+                                "grid",
+                              placeItems:
+                                "center",
+                              color:
+                                "#64748b",
+                              fontSize: 10,
+                            }}
+                          >
+                            NO PHOTO
+                          </div>
+                        )}
+                      </div>
+
+                      <div
+                        style={{
+                          flex: 1,
+                          minWidth: 0,
+                        }}
+                      >
+                        <div
+                          style={{
+                            fontSize: 16,
+                            fontWeight: 900,
+                            overflow:
+                              "hidden",
+                            textOverflow:
+                              "ellipsis",
+                            whiteSpace:
+                              "nowrap",
+                          }}
+                        >
+                          {
+                            person.name
+                          }
+                        </div>
+
+                        <div
+                          style={{
+                            color:
+                              "#94a3b8",
+                            fontSize: 11,
+                            marginTop: 3,
+                          }}
+                        >
+                          {
+                            person.level
+                          }
+                        </div>
+                      </div>
+
+                      <div
+                        style={{
+                          textAlign:
+                            "right",
+                        }}
+                      >
+                        <div
+                          style={{
+                            fontSize: 26,
+                            fontWeight: 950,
+                          }}
+                        >
+                          {
+                            person.score
+                          }
+                        </div>
+
+                        <div
+                          style={{
+                            fontSize: 10,
+                            color:
+                              "#94a3b8",
+                          }}
+                        >
+                          /1000
+                        </div>
+                      </div>
+                    </div>
+                  )
+                )}
+              </div>
+            )}
+          </section>
+        </div>
+      </main>
+    );
+  }
+
+  /* =========================================================
+     PROFILE VIEW
+     ========================================================= */
+
+  return (
+    <main
+      style={{
+        minHeight: "100vh",
+        background: "#020617",
+        color: "#f8fafc",
+        position: "relative",
+      }}
+    >
+      <Background />
+
+      <div style={pageWrap}>
+        <Header
+          email={currentEmail}
+          view={view}
+          setView={setView}
+          exportCSV={exportCSV}
+          logout={logout}
+        />
+
+        <div
+          style={{
+            display: "grid",
+            gap: 18,
+          }}
+        >
+          {/* SCORE */}
+
+          <section
+            style={{
+              ...card,
+              textAlign: "center",
+              padding: "30px 20px",
+            }}
+          >
+            <div
+              style={{
+                color: "#ef4444",
+                letterSpacing: 4,
+                fontSize: 11,
+                fontWeight: 900,
+              }}
+            >
+              ALPHA STATUS
+            </div>
+
+            <div
+              style={{
+                fontSize: 78,
+                lineHeight: 1,
+                fontWeight: 950,
+                marginTop: 9,
+                letterSpacing: -4,
+              }}
+            >
+              {score}
+            </div>
+
+            <div
+              style={{
+                color: "#94a3b8",
+                fontSize: 13,
+                marginTop: 3,
+              }}
+            >
+              OUT OF 1000
+            </div>
+
+            <div
+              style={{
+                fontSize: 24,
+                fontWeight: 950,
+                marginTop: 13,
+              }}
+            >
+              {level.name}
+            </div>
+
+            <div
+              style={{
+                color: "#cbd5e1",
+                fontSize: 13,
+                marginTop: 4,
+              }}
+            >
+              {
+                level.description
+              }
+            </div>
+          </section>
+
+          {/* PROFILE */}
+
+          <section style={card}>
+            <h2
+              style={sectionTitle}
+            >
+              Profile
+            </h2>
+
+            <div
+              style={
+                sectionDescription
+              }
+            >
+              Your Alpha Status
+              identity.
+            </div>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns:
+                  "repeat(auto-fit,minmax(240px,1fr))",
+                gap: 20,
+              }}
+            >
+              <div>
+                <div
+                  style={
+                    labelStyle
+                  }
+                >
+                  Display Name
+                </div>
+
+                <input
+                  value={name}
+                  style={inputStyle}
+                  placeholder="Your name"
+                  onChange={(
+                    event
+                  ) =>
+                    setName(
+                      event.target
+                        .value
+                    )
+                  }
+                />
+
+                {adminMode && (
+                  <div
                     style={{
-                      display: "flex",
-                      alignItems: "center",
+                      marginTop: 8,
+                      color:
+                        "#fca5a5",
+                      fontSize: 11,
+                      fontWeight: 800,
+                    }}
+                  >
+                    ADMIN ACCOUNT
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <div
+                  style={
+                    labelStyle
+                  }
+                >
+                  Profile Photo
+                </div>
+
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(
+                    event
+                  ) =>
+                    uploadProfilePhoto(
+                      event.target
+                        .files?.[0]
+                    )
+                  }
+                />
+
+                {profilePhoto && (
+                  <div
+                    style={{
+                      marginTop: 12,
+                    }}
+                  >
+                    <img
+                      src={
+                        profilePhoto
+                      }
+                      alt="Profile"
+                      style={{
+                        width: 125,
+                        height: 125,
+                        objectFit:
+                          "cover",
+                        borderRadius: 14,
+                        border:
+                          "1px solid rgba(255,255,255,.2)",
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+          </section>
+
+          {/* PHYSIQUE */}
+
+          <section style={card}>
+            <h2
+              style={sectionTitle}
+            >
+              Physique Assessment
+            </h2>
+
+            <div
+              style={
+                sectionDescription
+              }
+            >
+              Add an optional
+              non-explicit physique
+              photo.
+            </div>
+
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(event) =>
+                uploadAssessmentPhoto(
+                  event.target
+                    .files?.[0]
+                )
+              }
+            />
+
+            {assessmentPhoto && (
+              <div
+                style={{
+                  marginTop: 15,
+                }}
+              >
+                <img
+                  src={
+                    assessmentPhoto
+                  }
+                  alt="Physique"
+                  style={{
+                    width: "100%",
+                    maxWidth: 350,
+                    maxHeight: 450,
+                    objectFit:
+                      "cover",
+                    borderRadius: 14,
+                  }}
+                />
+              </div>
+            )}
+          </section>
+
+          {/* BONUS PHOTOS */}
+
+          <section style={card}>
+            <h2
+              style={sectionTitle}
+            >
+              Bonus Alpha Photos
+            </h2>
+
+            <div
+              style={
+                sectionDescription
+              }
+            >
+              Fitness, competition,
+              outdoors, action or
+              lifestyle photos.
+            </div>
+
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={(event) =>
+                uploadBonusPhotos(
+                  event.target.files
+                )
+              }
+            />
+
+            {bonusPhotos.length >
+              0 && (
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns:
+                    "repeat(auto-fill,minmax(145px,1fr))",
+                  gap: 12,
+                  marginTop: 17,
+                }}
+              >
+                {bonusPhotos.map(
+                  (
+                    photo,
+                    index
+                  ) => (
+                    <div
+                      key={index}
+                    >
+                      <img
+                        src={
+                          photo
+                        }
+                        alt={`Bonus ${
+                          index + 1
+                        }`}
+                        style={{
+                          width:
+                            "100%",
+                          height: 170,
+                          objectFit:
+                            "cover",
+                          borderRadius: 10,
+                        }}
+                      />
+
+                      <button
+                        style={{
+                          ...dangerButton,
+                          width:
+                            "100%",
+                          marginTop: 6,
+                          padding:
+                            "7px 8px",
+                        }}
+                        onClick={() =>
+                          removeBonusPhoto(
+                            index
+                          )
+                        }
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  )
+                )}
+              </div>
+            )}
+          </section>
+
+          <FactorSection
+            title="Strength"
+            description="Enter your best one-rep max."
+            factors={strength}
+            answers={answers}
+            updateAnswer={
+              updateAnswer
+            }
+            adminMode={adminMode}
+          />
+
+          <FactorSection
+            title="Member Measurements"
+            description="Optional numerical measurements included in the Alpha Status formula."
+            factors={member}
+            answers={answers}
+            updateAnswer={
+              updateAnswer
+            }
+            adminMode={adminMode}
+          />
+
+          <FactorSection
+            title="Conditioning"
+            description="Enter mile time as mm.ss. Example: 7.30 means 7 minutes, 30 seconds."
+            factors={conditioning}
+            answers={answers}
+            updateAnswer={
+              updateAnswer
+            }
+            adminMode={adminMode}
+          />
+
+          <FactorSection
+            title="Anthropometrics"
+            factors={
+              anthropometrics
+            }
+            answers={answers}
+            updateAnswer={
+              updateAnswer
+            }
+            adminMode={adminMode}
+          />
+
+          <FactorSection
+            title="Appearance"
+            factors={appearance}
+            answers={answers}
+            updateAnswer={
+              updateAnswer
+            }
+            adminMode={adminMode}
+          />
+
+          <FactorSection
+            title="Knowledge"
+            description="Rate yourself from 1 to 10 in each category."
+            factors={knowledge}
+            answers={answers}
+            updateAnswer={
+              updateAnswer
+            }
+            adminMode={adminMode}
+          />
+
+          {/* ACTIVITIES */}
+
+          <section style={card}>
+            <h2
+              style={sectionTitle}
+            >
+              Activities
+            </h2>
+
+            <div
+              style={
+                sectionDescription
+              }
+            >
+              Check everything
+              you've completed.
+              Activity points are
+              capped for scoring.
+            </div>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns:
+                  "repeat(auto-fit,minmax(220px,1fr))",
+                gap: 8,
+              }}
+            >
+              {activities.map(
+                (activity) => (
+                  <label
+                    key={
+                      activity.id
+                    }
+                    style={{
+                      display:
+                        "flex",
+                      alignItems:
+                        "center",
                       gap: 9,
-                      padding: "9px 10px",
                       border:
-                        "1px solid rgba(255,255,255,.08)",
+                        "1px solid rgba(255,255,255,.09)",
                       borderRadius: 9,
+                      padding:
+                        "10px 11px",
                       background:
-                        "rgba(15,23,42,.65)",
-                      cursor: "pointer",
+                        activityAnswers[
+                          activity.id
+                        ]
+                          ? "rgba(127,29,29,.30)"
+                          : "rgba(2,6,23,.45)",
+                      cursor:
+                        "pointer",
                     }}
                   >
                     <input
@@ -1296,131 +2575,303 @@ export default function Page() {
                       style={{
                         flex: 1,
                         fontSize: 13,
+                        fontWeight: 700,
                       }}
                     >
-                      {activity.label}
+                      {
+                        activity.label
+                      }
                     </span>
 
                     <span
                       style={{
-                        color: "#94a3b8",
+                        color:
+                          "#94a3b8",
                         fontSize: 11,
                       }}
                     >
-                      +{activity.points}
+                      +
+                      {
+                        activity.points
+                      }
                     </span>
                   </label>
-                ))}
-              </div>
-            </section>
+                )
+              )}
+            </div>
+          </section>
 
-            {/* LIFE */}
+          <FactorSection
+            title="Life & Family"
+            factors={life}
+            answers={answers}
+            updateAnswer={
+              updateAnswer
+            }
+            adminMode={adminMode}
+          />
 
-            <FactorSection
-              title="Life & Family"
-              factors={life}
-              answers={answers}
-              updateAnswer={updateAnswer}
-              isAdmin={isAdmin}
-            />
+          <FactorSection
+            title="Admin-Assessed"
+            description={
+              adminMode
+                ? "This test account has administrator access, so you can adjust these ratings."
+                : "These ratings are locked for non-admin accounts."
+            }
+            factors={
+              adminFactors
+            }
+            answers={answers}
+            updateAnswer={
+              updateAnswer
+            }
+            adminMode={adminMode}
+          />
 
-            {/* ADMIN */}
+          {/* BOTTOM SCORE */}
 
-            <FactorSection
-              title="Admin-Assessed"
-              description={
-                isAdmin
-                  ? "You are signed in as an administrator."
-                  : "These ratings can only be changed by an administrator."
-              }
-              factors={adminFactors}
-              answers={answers}
-              updateAnswer={updateAnswer}
-              isAdmin={isAdmin}
-            />
-
-            {/* FINAL SCORE */}
-
-            <section
+          <section
+            style={{
+              ...card,
+              textAlign: "center",
+              padding: 28,
+            }}
+          >
+            <div
               style={{
-                ...box,
-                textAlign: "center",
-                padding: 26,
+                color: "#94a3b8",
+                letterSpacing: 3,
+                fontSize: 10,
+                fontWeight: 900,
               }}
             >
-              <div
+              CURRENT ALPHA
+              STATUS
+            </div>
+
+            <div
+              style={{
+                fontSize: 58,
+                fontWeight: 950,
+                marginTop: 5,
+              }}
+            >
+              {score}
+              <span
                 style={{
-                  color: "#94a3b8",
-                  fontSize: 12,
-                  fontWeight: 800,
-                  textTransform: "uppercase",
-                  letterSpacing: 2,
+                  fontSize: 18,
+                  color:
+                    "#94a3b8",
+                  marginLeft: 4,
                 }}
               >
-                Current Alpha Status
-              </div>
+                /1000
+              </span>
+            </div>
 
-              <div
-                style={{
-                  fontSize: 56,
-                  fontWeight: 950,
-                  marginTop: 4,
-                }}
+            <div
+              style={{
+                fontSize: 20,
+                fontWeight: 900,
+              }}
+            >
+              {level.name}
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                justifyContent:
+                  "center",
+                gap: 9,
+                flexWrap: "wrap",
+                marginTop: 20,
+              }}
+            >
+              <button
+                style={
+                  primaryButton
+                }
+                onClick={
+                  saveProfile
+                }
               >
-                {score}
-                <span
-                  style={{
-                    color: "#94a3b8",
-                    fontSize: 20,
-                  }}
-                >
-                  /1000
-                </span>
-              </div>
+                Save Profile
+              </button>
 
-              <div
-                style={{
-                  fontSize: 20,
-                  fontWeight: 900,
-                }}
+              <button
+                style={
+                  lightButton
+                }
+                onClick={() =>
+                  setView(
+                    "leaderboard"
+                  )
+                }
               >
-                {level.name}
-              </div>
+                View Leaderboard
+              </button>
 
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "center",
-                  gap: 10,
-                  flexWrap: "wrap",
-                  marginTop: 20,
-                }}
+              <button
+                style={
+                  dangerButton
+                }
+                onClick={
+                  resetAnswers
+                }
               >
-                <button
-                  onClick={handleSave}
-                  style={buttonPrimary}
-                >
-                  Save Profile
-                </button>
-
-                <Link
-                  href="/leaderboard"
-                  style={buttonGhost}
-                >
-                  View Leaderboard
-                </Link>
-
-                <button
-                  onClick={handleReset}
-                  style={buttonDanger}
-                >
-                  Reset Answers
-                </button>
-              </div>
-            </section>
-          </div>
-        )}
+                Reset Answers
+              </button>
+            </div>
+          </section>
+        </div>
       </div>
     </main>
+  );
+}
+
+/* =========================================================
+   BACKGROUND
+   ========================================================= */
+
+function Background() {
+  return (
+    <>
+      <div
+        style={{
+          position: "fixed",
+          inset: 0,
+          backgroundImage:
+            "url('/alpha-hero.png')",
+          backgroundSize: "cover",
+          backgroundPosition:
+            "center",
+          opacity: 0.3,
+          pointerEvents: "none",
+          zIndex: 0,
+        }}
+      />
+
+      <div
+        style={{
+          position: "fixed",
+          inset: 0,
+          background:
+            "linear-gradient(to bottom, rgba(2,6,23,.28), rgba(2,6,23,.96))",
+          pointerEvents: "none",
+          zIndex: 1,
+        }}
+      />
+    </>
+  );
+}
+
+/* =========================================================
+   HEADER
+   ========================================================= */
+
+function Header({
+  email,
+  view,
+  setView,
+  exportCSV,
+  logout,
+}: {
+  email: string;
+  view: "profile" | "leaderboard";
+  setView: (
+    value:
+      | "profile"
+      | "leaderboard"
+  ) => void;
+  exportCSV: () => void;
+  logout: () => void;
+}) {
+  return (
+    <header
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent:
+          "space-between",
+        flexWrap: "wrap",
+        gap: 15,
+        marginBottom: 22,
+      }}
+    >
+      <div>
+        <h1
+          style={{
+            margin: 0,
+            fontSize: 31,
+            fontWeight: 950,
+            letterSpacing: -1,
+          }}
+        >
+          ALPHA STATUS
+        </h1>
+
+        <div
+          style={{
+            color: "#cbd5e1",
+            fontSize: 11,
+            marginTop: 4,
+          }}
+        >
+          Signed in as {email}
+        </div>
+      </div>
+
+      <div
+        style={{
+          display: "flex",
+          gap: 8,
+          flexWrap: "wrap",
+        }}
+      >
+        <button
+          style={
+            view === "profile"
+              ? primaryButton
+              : lightButton
+          }
+          onClick={() =>
+            setView("profile")
+          }
+        >
+          My Status
+        </button>
+
+        <button
+          style={
+            view ===
+            "leaderboard"
+              ? primaryButton
+              : lightButton
+          }
+          onClick={() =>
+            setView(
+              "leaderboard"
+            )
+          }
+        >
+          Leaderboard
+        </button>
+
+        <button
+          style={lightButton}
+          onClick={exportCSV}
+        >
+          Export CSV
+        </button>
+
+        <button
+          style={darkButton}
+          onClick={logout}
+        >
+          Sign Out
+        </button>
+      </div>
+    </header>
   );
 }
