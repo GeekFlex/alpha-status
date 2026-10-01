@@ -78,7 +78,9 @@ const FACTORS: Factor[] = [
     options: [
       { label: "Clean shaven", value: 50 },
       { label: "Stubble", value: 70 },
-      { label: "Trimmed beard", value: 85 },
+      { label: "Mustache", value: 78 },
+      { label: "Goatee", value: 82 },
+      { label: "Trimmed beard", value: 88 },
       { label: "Full beard", value: 95 },
     ],
   },
@@ -131,6 +133,15 @@ const FACTORS: Factor[] = [
   },
 
   /* BODY STATS */
+
+  {
+    kind: "number",
+    id: "age",
+    label: "Age",
+    unit: "years",
+    weight: 0,
+    domain: { min: 18, max: 100, better: "higher" },
+  },
 
   {
     kind: "number",
@@ -278,11 +289,105 @@ const FACTORS: Factor[] = [
     domain: { min: 0, max: 1000, better: "higher" },
   },
 
-  /* CONDITIONING */
+  /* TRAINING EXPERIENCE */
+
+  {
+    kind: "number",
+    id: "years_lifting",
+    label: "Years Lifting",
+    unit: "years",
+    weight: 0.025,
+    domain: { min: 0, max: 20, better: "higher" },
+  },
+
+  /* ATHLETIC PERFORMANCE */
+
+  {
+    kind: "number",
+    id: "max_pullups",
+    label: "Max Pull-Ups",
+    unit: "reps",
+    weight: 0.035,
+    domain: { min: 0, max: 30, better: "higher" },
+  },
+
+  {
+    kind: "number",
+    id: "max_pushups",
+    label: "Max Push-Ups",
+    unit: "reps",
+    weight: 0.025,
+    domain: { min: 0, max: 100, better: "higher" },
+  },
+
+  {
+    kind: "number",
+    id: "dead_hang",
+    label: "Dead Hang",
+    unit: "seconds",
+    weight: 0.025,
+    domain: { min: 0, max: 180, better: "higher" },
+  },
+
+  {
+    kind: "number",
+    id: "grip_strength",
+    label: "Grip Strength",
+    unit: "lb",
+    weight: 0.025,
+    domain: { min: 0, max: 220, better: "higher" },
+  },
+
+  {
+    kind: "number",
+    id: "vertical_jump",
+    label: "Vertical Jump",
+    unit: "in",
+    weight: 0.025,
+    domain: { min: 0, max: 40, better: "higher" },
+  },
+
+  {
+    kind: "number",
+    id: "sprint_100m",
+    label: "100m Sprint",
+    unit: "seconds",
+    weight: 0.025,
+    domain: { min: 9, max: 30, better: "lower" },
+  },
 
   {
     kind: "number",
     id: "mile_time",
+    label: "Fastest 1 Mile",
+    unit: "mm.ss",
+    weight: 0.045,
+    domain: { min: 240, max: 900, better: "lower" },
+  },
+
+  {
+    kind: "number",
+    id: "five_k_time",
+    label: "Fastest 5K",
+    unit: "mm.ss",
+    weight: 0.03,
+    domain: { min: 720, max: 3600, better: "lower" },
+  },
+
+  {
+    kind: "number",
+    id: "hyrox_time",
+    label: "Best HYROX Time",
+    unit: "mm.ss",
+    weight: 0.03,
+    domain: { min: 2700, max: 9000, better: "lower" },
+  },
+
+  /* CONDITIONING */
+
+  {
+    kind: "number",
+    id: "workout_days",
     label: "Fastest 1 Mile",
     unit: "mm.ss",
     weight: 0.08,
@@ -667,8 +772,10 @@ function factorScore(factor: Factor, answers: Record<string, any>) {
     return 0;
   }
 
+  const timeFields = ["mile_time", "five_k_time", "hyrox_time"];
+
   let numeric =
-    factor.id === "mile_time" ? parseMile(value) : Number(value);
+    timeFields.includes(factor.id) ? parseMile(value) : Number(value);
 
   if (!Number.isFinite(numeric)) return 0;
 
@@ -685,6 +792,95 @@ function factorScore(factor: Factor, answers: Record<string, any>) {
   return Math.round((1 - clamp01(progress)) * 100);
 }
 
+type Achievement = {
+  id: string;
+  title: string;
+  description: string;
+  bonus: number;
+};
+
+function getClubTotal(answers: Record<string, any> = {}) {
+  return (
+    (Number(answers.max_bench) || 0) +
+    (Number(answers.max_squat) || 0) +
+    (Number(answers.max_deadlift) || 0)
+  );
+}
+
+function getAchievements(answers: Record<string, any> = {}): Achievement[] {
+  const achievements: Achievement[] = [];
+  const club = getClubTotal(answers);
+  const bench = Number(answers.max_bench) || 0;
+  const deadlift = Number(answers.max_deadlift) || 0;
+  const pullups = Number(answers.max_pullups) || 0;
+  const mile = parseMile(answers.mile_time);
+  const activities =
+    answers.activities && typeof answers.activities === "object"
+      ? answers.activities
+      : {};
+
+  const add = (id: string, title: string, description: string, bonus: number) =>
+    achievements.push({ id, title, description, bonus });
+
+  if (club >= 500) add("club500", "500 Club", "500+ lb combined big three.", 2);
+  if (club >= 750) add("club750", "750 Club", "750+ lb combined big three.", 3);
+  if (club >= 900) add("club900", "900 Club", "900+ lb combined big three.", 4);
+  if (club >= 1000) add("club1000", "1000 Club", "1000+ lb combined big three.", 5);
+  if (club >= 1200) add("club1200", "1200 Club", "1200+ lb combined big three.", 6);
+
+  if (bench >= 225) add("bench225", "Two Plates", "225+ lb bench press.", 2);
+  if (bench >= 275) add("bench275", "Heavy Bench", "275+ lb bench press.", 3);
+  if (bench >= 315) add("bench315", "Three Plate Bench", "315+ lb bench press.", 5);
+
+  if (deadlift >= 315) add("dead315", "Three Plate Pull", "315+ lb deadlift.", 2);
+  if (deadlift >= 405) add("dead405", "Four Plate Pull", "405+ lb deadlift.", 4);
+  if (deadlift >= 500) add("dead500", "500 Pull", "500+ lb deadlift.", 6);
+
+  if (pullups >= 10) add("pull10", "Pull-Up 10", "10+ strict pull-ups.", 2);
+  if (pullups >= 15) add("pull15", "Pull-Up 15", "15+ strict pull-ups.", 3);
+  if (pullups >= 20) add("pull20", "Pull-Up 20", "20+ strict pull-ups.", 5);
+
+  if (Number.isFinite(mile) && mile > 0 && mile <= 600)
+    add("mile10", "Sub-10 Mile", "Mile under 10:00.", 1);
+  if (Number.isFinite(mile) && mile > 0 && mile <= 540)
+    add("mile9", "Sub-9 Mile", "Mile under 9:00.", 2);
+  if (Number.isFinite(mile) && mile > 0 && mile <= 480)
+    add("mile8", "Sub-8 Mile", "Mile under 8:00.", 3);
+  if (Number.isFinite(mile) && mile > 0 && mile <= 420)
+    add("mile7", "Sub-7 Mile", "Mile under 7:00.", 5);
+
+  if (activities.hyrox) add("hyrox", "HYROX Finisher", "Completed a HYROX.", 4);
+  if (activities.marathon) add("marathon", "Marathoner", "Completed a marathon.", 5);
+  if (activities.ironman) add("ironman", "Ironman", "Completed an Ironman.", 7);
+
+  if (activities.bjj || activities.boxing || activities.wrestling)
+    add("combat", "Combat Trained", "BJJ, boxing or wrestling experience.", 3);
+
+  const outdoors = ["hiking", "hunting", "fishing", "fire_building", "chopwood"]
+    .filter((id) => activities[id]).length;
+  if (outdoors >= 3)
+    add("outdoors", "Outdoorsman", "Completed 3+ outdoor capability activities.", 3);
+
+  const sports = ["soccer", "baseball", "hockey", "lacrosse", "rugby", "volleyball", "football", "golfing"]
+    .filter((id) => activities[id]).length;
+  if (sports >= 3)
+    add("multisport", "Multi-Sport Athlete", "Participated in 3+ listed sports.", 3);
+
+  const adrenaline = ["skydiving", "cliff_diving", "motocross", "drag_racing", "drive_motorcycle", "drive_dirtbike"]
+    .filter((id) => activities[id]).length;
+  if (adrenaline >= 2)
+    add("adrenaline", "Adrenaline Junkie", "Completed 2+ high-adrenaline activities.", 3);
+
+  return achievements;
+}
+
+function achievementBonus(answers: Record<string, any> = {}) {
+  return Math.min(
+    50,
+    getAchievements(answers).reduce((total, achievement) => total + achievement.bonus, 0)
+  );
+}
+
 function calculateScore(answers: Record<string, any> = {}) {
   const totalWeight = FACTORS.reduce(
     (total, factor) => total + factor.weight,
@@ -699,7 +895,34 @@ function calculateScore(answers: Record<string, any> = {}) {
 
   if (!totalWeight) return 0;
 
-  return Math.round((weighted / totalWeight) * 10);
+  const baseScore = Math.round((weighted / totalWeight) * 9.5);
+  return Math.min(1000, baseScore + achievementBonus(answers));
+}
+
+function profileCompletion(answers: Record<string, any> = {}, name = "", profilePhoto?: string) {
+  const scorable = FACTORS.filter(
+    (factor) => factor.kind !== "checklist" && !factor.adminOnly && factor.id !== "age"
+  );
+  const completedFactors = scorable.filter((factor) => {
+    const value = answers[factor.id];
+    return value !== undefined && value !== null && value !== "";
+  }).length;
+
+  const activityComplete =
+    answers.activities &&
+    typeof answers.activities === "object" &&
+    Object.values(answers.activities).some(Boolean)
+      ? 1
+      : 0;
+
+  const total = scorable.length + 3;
+  const completed =
+    completedFactors +
+    activityComplete +
+    (name.trim() ? 1 : 0) +
+    (profilePhoto ? 1 : 0);
+
+  return Math.round((completed / total) * 100);
 }
 
 function levelFor(score: number) {
@@ -818,6 +1041,11 @@ function FactorField({
 
   if (
     factor.id === "workout_days" ||
+    factor.id === "age" ||
+    factor.id === "years_lifting" ||
+    factor.id === "max_pullups" ||
+    factor.id === "max_pushups" ||
+    factor.id === "dead_hang" ||
     factor.id === "children_count" ||
     factor.id === "hit_number" ||
     factor.id === "alpha_look" ||
@@ -827,7 +1055,7 @@ function FactorField({
     step = 1;
   }
 
-  if (factor.id === "mile_time") step = 0.01;
+  if (["mile_time", "five_k_time", "hyrox_time"].includes(factor.id)) step = 0.01;
 
   const disabled = !!factor.adminOnly && !adminMode;
 
@@ -969,6 +1197,12 @@ export default function Page() {
 
   const score = useMemo(() => calculateScore(answers), [answers]);
   const level = levelFor(score);
+  const achievements = useMemo(() => getAchievements(answers), [answers]);
+  const achievementPoints = useMemo(() => achievementBonus(answers), [answers]);
+  const completion = useMemo(
+    () => profileCompletion(answers, name, profilePhoto),
+    [answers, name, profilePhoto]
+  );
 
   const strength = getFactors([
     "max_bench",
@@ -981,12 +1215,25 @@ export default function Page() {
     "member_girth",
   ]);
 
-  const conditioning = getFactors([
+  const athleticPerformance = getFactors([
+    "max_pullups",
+    "max_pushups",
+    "dead_hang",
+    "grip_strength",
+    "vertical_jump",
+    "sprint_100m",
     "mile_time",
+    "five_k_time",
+    "hyrox_time",
+  ]);
+
+  const conditioning = getFactors([
+    "years_lifting",
     "workout_days",
   ]);
 
   const bodyStats = getFactors([
+    "age",
     "weight",
     "chest_size",
     "biceps_flexed",
@@ -1039,6 +1286,8 @@ export default function Page() {
     answers.activities && typeof answers.activities === "object"
       ? answers.activities
       : {};
+
+  const activityCount = Object.values(activityAnswers).filter(Boolean).length;
 
   async function authenticate() {
     const cleanEmail = email.trim().toLowerCase();
@@ -1205,6 +1454,8 @@ export default function Page() {
         "score1000",
         "level",
         "clubTotal",
+        "achievementCount",
+        "achievementBonus",
         ...factorIds,
       ],
     ];
@@ -1238,6 +1489,8 @@ export default function Page() {
         String(userScore),
         levelFor(userScore).name,
         String(userClubTotal),
+        String(getAchievements(userAnswers).length),
+        String(achievementBonus(userAnswers)),
         ...factorValues,
       ]);
     });
@@ -1288,6 +1541,7 @@ export default function Page() {
           score: userScore,
           level: levelFor(userScore).name,
           clubTotal: userClubTotal,
+          achievementCount: getAchievements(userAnswers).length,
         };
       })
       .sort((a, b) => b.score - a.score);
@@ -1555,7 +1809,7 @@ export default function Page() {
                         marginTop: 3,
                       }}
                     >
-                      {person.level} • {person.clubTotal} LB Total
+                      {person.level} • {person.clubTotal} LB Total • {person.achievementCount} Achievements
                     </div>
                   </div>
 
@@ -1642,6 +1896,99 @@ export default function Page() {
 
             <div style={{ color: "#cbd5e1", fontSize: 13, marginTop: 4 }}>
               {level.description}
+            </div>
+          </section>
+
+          {/* ALPHA PROFILE CARD */}
+
+          <section
+            style={{
+              ...card,
+              background:
+                "linear-gradient(135deg, rgba(69,10,10,.92), rgba(8,12,18,.96) 55%, rgba(15,23,42,.94))",
+            }}
+          >
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "auto 1fr",
+                gap: 18,
+                alignItems: "center",
+              }}
+            >
+              <div
+                style={{
+                  width: 110,
+                  height: 110,
+                  borderRadius: 16,
+                  overflow: "hidden",
+                  background: "#020617",
+                  border: "1px solid rgba(255,255,255,.18)",
+                }}
+              >
+                {profilePhoto ? (
+                  <img
+                    src={profilePhoto}
+                    alt={name || "Profile"}
+                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      height: "100%",
+                      display: "grid",
+                      placeItems: "center",
+                      color: "#64748b",
+                      fontSize: 11,
+                      fontWeight: 800,
+                    }}
+                  >
+                    NO PHOTO
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <div style={{ color: "#ef4444", fontSize: 10, fontWeight: 900, letterSpacing: 3 }}>
+                  ALPHA PROFILE
+                </div>
+                <div style={{ fontSize: 30, fontWeight: 950, marginTop: 4 }}>
+                  {(name || "UNNAMED").toUpperCase()}
+                </div>
+                <div style={{ fontSize: 15, fontWeight: 900, marginTop: 3 }}>
+                  {level.name} • {score}/1000
+                </div>
+                <div style={{ color: "#cbd5e1", fontSize: 12, marginTop: 8, lineHeight: 1.6 }}>
+                  {clubNumber} LB Total • {activityCount} Activities • {achievements.length} Achievements
+                </div>
+                <div style={{ color: "#94a3b8", fontSize: 11, marginTop: 2 }}>
+                  Bench {answers.max_bench || 0} • Squat {answers.max_squat || 0} • Deadlift {answers.max_deadlift || 0}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ marginTop: 18 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, fontWeight: 800 }}>
+                <span>PROFILE COMPLETION</span>
+                <span>{completion}%</span>
+              </div>
+              <div
+                style={{
+                  height: 8,
+                  background: "#111827",
+                  borderRadius: 999,
+                  overflow: "hidden",
+                  marginTop: 7,
+                }}
+              >
+                <div
+                  style={{
+                    width: `${completion}%`,
+                    height: "100%",
+                    background: "#dc2626",
+                  }}
+                />
+              </div>
             </div>
           </section>
 
@@ -1878,8 +2225,17 @@ export default function Page() {
           />
 
           <FactorSection
-            title="Conditioning"
-            description="Enter mile time as mm.ss. Example: 7.30 means 7 minutes, 30 seconds."
+            title="Athletic Performance"
+            description="Performance metrics affect Alpha Status. Enter mile, 5K and HYROX times as mm.ss."
+            factors={athleticPerformance}
+            answers={answers}
+            updateAnswer={updateAnswer}
+            adminMode={adminMode}
+          />
+
+          <FactorSection
+            title="Training"
+            description="Training experience and weekly consistency."
             factors={conditioning}
             answers={answers}
             updateAnswer={updateAnswer}
@@ -1971,6 +2327,64 @@ export default function Page() {
                 </label>
               ))}
             </div>
+          </section>
+
+          <section style={card}>
+            <h2 style={sectionTitle}>Achievements</h2>
+            <div style={sectionDescription}>
+              Unlocked automatically from your stats and activities. Achievement bonuses can add up to 50 points to Alpha Status.
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                gap: 12,
+                marginBottom: 15,
+                padding: 12,
+                borderRadius: 10,
+                background: "rgba(127,29,29,.24)",
+                border: "1px solid rgba(239,68,68,.25)",
+              }}
+            >
+              <strong>{achievements.length} Unlocked</strong>
+              <strong style={{ color: "#fca5a5" }}>+{achievementPoints} / 50 Score Bonus</strong>
+            </div>
+
+            {achievements.length ? (
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))",
+                  gap: 10,
+                }}
+              >
+                {achievements.map((achievement) => (
+                  <div
+                    key={achievement.id}
+                    style={{
+                      border: "1px solid rgba(255,255,255,.12)",
+                      borderRadius: 11,
+                      padding: 13,
+                      background: "rgba(15,23,42,.7)",
+                    }}
+                  >
+                    <div style={{ fontSize: 14, fontWeight: 900 }}>{achievement.title}</div>
+                    <div style={{ color: "#94a3b8", fontSize: 11, marginTop: 4 }}>
+                      {achievement.description}
+                    </div>
+                    <div style={{ color: "#ef4444", fontSize: 11, fontWeight: 900, marginTop: 7 }}>
+                      +{achievement.bonus} bonus
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{ color: "#94a3b8", fontSize: 12 }}>
+                Enter stats and complete activities to start unlocking achievements.
+              </div>
+            )}
           </section>
 
           <FactorSection
