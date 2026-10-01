@@ -901,7 +901,10 @@ function calculateScore(answers: Record<string, any> = {}) {
 
 function profileCompletion(answers: Record<string, any> = {}, name = "", profilePhoto?: string) {
   const scorable = FACTORS.filter(
-    (factor) => factor.kind !== "checklist" && !factor.adminOnly && factor.id !== "age"
+    (factor) =>
+      factor.kind !== "checklist" &&
+      !("adminOnly" in factor && factor.adminOnly) &&
+      factor.id !== "age"
   );
   const completedFactors = scorable.filter((factor) => {
     const value = answers[factor.id];
