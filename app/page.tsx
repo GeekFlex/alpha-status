@@ -2,11 +2,6 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 
-/* =========================================================
-   ALPHA STATUS
-   Single-file testing version
-   ========================================================= */
-
 const USERS_KEY = "alpha_status_test_v1";
 
 /* =========================================================
@@ -135,42 +130,105 @@ const FACTORS: Factor[] = [
     domain: { min: 0, max: 20, better: "higher" },
   },
 
-  /* BODY */
+  /* BODY STATS */
+
+  {
+    kind: "number",
+    id: "weight",
+    label: "Weight",
+    unit: "lb",
+    weight: 0.01,
+    domain: { min: 0, max: 400, better: "higher" },
+  },
 
   {
     kind: "number",
     id: "chest_size",
-    label: "Chest Size",
+    label: "Chest",
     unit: "in",
-    weight: 0.03,
+    weight: 0.01,
     domain: { min: 0, max: 70, better: "higher" },
   },
 
   {
     kind: "number",
-    id: "arm_size",
-    label: "Arm Size",
+    id: "biceps_flexed",
+    label: "Biceps - Flexed",
     unit: "in",
-    weight: 0.03,
+    weight: 0.01,
     domain: { min: 0, max: 30, better: "higher" },
   },
 
   {
     kind: "number",
-    id: "quad_size",
-    label: "Quad Size",
+    id: "biceps_relaxed",
+    label: "Biceps - Relaxed",
     unit: "in",
-    weight: 0.03,
+    weight: 0.005,
+    domain: { min: 0, max: 30, better: "higher" },
+  },
+
+  {
+    kind: "number",
+    id: "forearms",
+    label: "Forearms",
+    unit: "in",
+    weight: 0.005,
+    domain: { min: 0, max: 25, better: "higher" },
+  },
+
+  {
+    kind: "number",
+    id: "quad_size",
+    label: "Quads",
+    unit: "in",
+    weight: 0.01,
     domain: { min: 0, max: 40, better: "higher" },
   },
 
   {
     kind: "number",
     id: "shoulder_size",
-    label: "Shoulder Size",
+    label: "Shoulders",
     unit: "in",
-    weight: 0.03,
+    weight: 0.01,
     domain: { min: 0, max: 80, better: "higher" },
+  },
+
+  {
+    kind: "number",
+    id: "waist",
+    label: "Waist at Bellybutton",
+    unit: "in",
+    weight: 0.005,
+    domain: { min: 20, max: 70, better: "lower" },
+  },
+
+  {
+    kind: "number",
+    id: "glutes",
+    label: "Glutes",
+    unit: "in",
+    weight: 0.005,
+    domain: { min: 0, max: 70, better: "higher" },
+  },
+
+  {
+    kind: "number",
+    id: "calves",
+    label: "Calves",
+    unit: "in",
+    weight: 0.005,
+    domain: { min: 0, max: 30, better: "higher" },
+  },
+
+  {
+    kind: "number",
+    id: "neck",
+    label: "Neck",
+    unit: "in",
+    weight: 0.005,
+    domain: { min: 0, max: 30, better: "higher" },
   },
 
   {
@@ -178,7 +236,7 @@ const FACTORS: Factor[] = [
     id: "height",
     label: "Height",
     unit: "in",
-    weight: 0.02,
+    weight: 0.01,
     domain: { min: 0, max: 100, better: "higher" },
   },
 
@@ -187,7 +245,7 @@ const FACTORS: Factor[] = [
     id: "body_fat",
     label: "Body Fat",
     unit: "%",
-    weight: 0.03,
+    weight: 0.02,
     domain: { min: 0, max: 60, better: "lower" },
   },
 
@@ -325,7 +383,7 @@ const FACTORS: Factor[] = [
     ([id, label]): NumberFactor => ({
       kind: "number",
       id,
-      label: `Knowledge — ${label}`,
+      label: `Knowledge - ${label}`,
       unit: "/10",
       weight: 0.006,
       domain: {
@@ -348,10 +406,13 @@ const FACTORS: Factor[] = [
       { id: "hyrox", label: "HYROX", points: 20 },
       { id: "spartan", label: "Spartan Race", points: 15 },
       { id: "marathon", label: "Marathon", points: 20 },
+      { id: "ironman", label: "Ironman", points: 25 },
       { id: "triathlon", label: "Triathlon", points: 20 },
+      { id: "five_k", label: "5K", points: 10 },
       { id: "murph", label: "Murph", points: 15 },
       { id: "tough_mudder", label: "Tough Mudder", points: 15 },
 
+      { id: "weight_lifting", label: "Weight Lifting", points: 10 },
       { id: "rock_climb", label: "Rock Climbing", points: 10 },
       { id: "hiking", label: "Hiking", points: 5 },
 
@@ -360,109 +421,44 @@ const FACTORS: Factor[] = [
       { id: "snowboarding", label: "Snowboarding", points: 10 },
       { id: "wakeboarding", label: "Wakeboarding", points: 10 },
       { id: "waterskiing", label: "Water Skiing", points: 10 },
+      { id: "scuba_diving", label: "Scuba Diving", points: 15 },
+      { id: "cliff_diving", label: "Cliff Diving", points: 15 },
+      { id: "skydiving", label: "Skydiving", points: 20 },
 
-      {
-        id: "snowmobiling",
-        label: "Driving a Snowmobile",
-        points: 5,
-      },
-      {
-        id: "jetski",
-        label: "Driving a Jet Ski",
-        points: 5,
-      },
-      {
-        id: "drive_atv",
-        label: "Driving an ATV",
-        points: 10,
-      },
-      {
-        id: "drive_motorcycle",
-        label: "Driving a Motorcycle",
-        points: 15,
-      },
-      {
-        id: "drive_dirtbike",
-        label: "Driving a Dirt Bike",
-        points: 10,
-      },
+      { id: "snowmobiling", label: "Driving a Snowmobile", points: 5 },
+      { id: "jetski", label: "Driving a Jet Ski", points: 5 },
+      { id: "drive_atv", label: "Driving an ATV", points: 10 },
+      { id: "drive_motorcycle", label: "Driving a Motorcycle", points: 15 },
+      { id: "drive_dirtbike", label: "Driving a Dirt Bike", points: 10 },
+      { id: "drag_racing", label: "Drag Racing", points: 15 },
 
-      {
-        id: "fire_building",
-        label: "Building a Fire",
-        points: 10,
-      },
+      { id: "fire_building", label: "Building a Fire", points: 10 },
       { id: "fishing", label: "Fishing", points: 5 },
-      {
-        id: "chopwood",
-        label: "Chopping Wood",
-        points: 5,
-      },
+      { id: "hunting", label: "Hunting", points: 10 },
+      { id: "chopwood", label: "Chopping Wood", points: 5 },
 
-      {
-        id: "bjj",
-        label: "Brazilian Jiu-Jitsu",
-        points: 15,
-      },
-      {
-        id: "wrestling",
-        label: "Wrestling",
-        points: 15,
-      },
+      { id: "bjj", label: "Brazilian Jiu-Jitsu", points: 15 },
+      { id: "wrestling", label: "Wrestling", points: 15 },
       { id: "boxing", label: "Boxing", points: 15 },
-      {
-        id: "winfight",
-        label: "Winning a Fight",
-        points: 20,
-      },
+      { id: "winfight", label: "Winning a Fight", points: 20 },
 
-      {
-        id: "shootgun",
-        label: "Shooting a Gun",
-        points: 10,
-      },
-      {
-        id: "shootbow",
-        label: "Shooting a Bow and Arrow",
-        points: 10,
-      },
+      { id: "shootgun", label: "Shooting a Gun", points: 10 },
+      { id: "shootbow", label: "Shooting a Bow and Arrow", points: 10 },
 
       { id: "golfing", label: "Golfing", points: 5 },
+      { id: "soccer", label: "Soccer", points: 10 },
+      { id: "baseball", label: "Baseball", points: 10 },
       { id: "hockey", label: "Hockey", points: 10 },
       { id: "lacrosse", label: "Lacrosse", points: 10 },
       { id: "rugby", label: "Rugby", points: 15 },
-      {
-        id: "volleyball",
-        label: "Volleyball",
-        points: 5,
-      },
-      {
-        id: "football",
-        label: "Football",
-        points: 15,
-      },
+      { id: "volleyball", label: "Volleyball", points: 5 },
+      { id: "football", label: "Football", points: 15 },
 
-      {
-        id: "powerlifting_meet",
-        label: "Powerlifting Meet",
-        points: 20,
-      },
-      {
-        id: "motocross",
-        label: "Motocross",
-        points: 15,
-      },
+      { id: "powerlifting_meet", label: "Powerlifting Meet", points: 20 },
+      { id: "motocross", label: "Motocross", points: 15 },
 
-      {
-        id: "shotgun",
-        label: "Shotgun a Beer",
-        points: 5,
-      },
-      {
-        id: "baby_making",
-        label: "Baby Making",
-        points: 15,
-      },
+      { id: "shotgun", label: "Shotgun a Beer", points: 5 },
+      { id: "reproduce", label: "Reproduce", points: 15 },
     ],
   },
 ];
@@ -592,16 +588,12 @@ function persistUsers(users: Record<string, UserRecord>) {
 }
 
 /* =========================================================
-   AUTH / FILE HELPERS
+   HELPERS
    ========================================================= */
 
 async function sha256(text: string) {
   const bytes = new TextEncoder().encode(text);
-
-  const buffer = await crypto.subtle.digest(
-    "SHA-256",
-    bytes
-  );
+  const buffer = await crypto.subtle.digest("SHA-256", bytes);
 
   return Array.from(new Uint8Array(buffer))
     .map((b) => b.toString(16).padStart(2, "0"))
@@ -628,50 +620,27 @@ function clamp01(value: number) {
 }
 
 function parseMile(value: any) {
-  if (
-    typeof value === "string" &&
-    value.includes(".")
-  ) {
-    const [minutesText, secondsText] =
-      value.split(".");
+  if (typeof value === "string" && value.includes(".")) {
+    const [minutesText, secondsText] = value.split(".");
 
-    const minutes = parseInt(
-      minutesText || "0",
-      10
-    );
+    const minutes = parseInt(minutesText || "0", 10);
+    const seconds = parseInt(secondsText || "0", 10);
 
-    const seconds = parseInt(
-      secondsText || "0",
-      10
-    );
-
-    if (
-      Number.isFinite(minutes) &&
-      Number.isFinite(seconds)
-    ) {
+    if (Number.isFinite(minutes) && Number.isFinite(seconds)) {
       return minutes * 60 + seconds;
     }
   }
 
   const numeric = Number(value);
 
-  return Number.isFinite(numeric)
-    ? numeric
-    : NaN;
+  return Number.isFinite(numeric) ? numeric : NaN;
 }
 
-function factorScore(
-  factor: Factor,
-  answers: Record<string, any>
-) {
+function factorScore(factor: Factor, answers: Record<string, any>) {
   const value = answers[factor.id];
 
   if (factor.kind === "select") {
-    if (
-      value === "" ||
-      value === undefined ||
-      value === null
-    ) {
+    if (value === "" || value === undefined || value === null) {
       return 0;
     }
 
@@ -684,132 +653,83 @@ function factorScore(
 
   if (factor.kind === "checklist") {
     const selections =
-      value && typeof value === "object"
-        ? value
-        : {};
+      value && typeof value === "object" ? value : {};
 
     const points = factor.items.reduce(
-      (total, item) =>
-        total +
-        (selections[item.id]
-          ? item.points
-          : 0),
+      (total, item) => total + (selections[item.id] ? item.points : 0),
       0
     );
 
-    return Math.round(
-      clamp01(points / factor.cap) * 100
-    );
+    return Math.round(clamp01(points / factor.cap) * 100);
   }
 
-  if (
-    value === "" ||
-    value === undefined ||
-    value === null
-  ) {
+  if (value === "" || value === undefined || value === null) {
     return 0;
   }
 
   let numeric =
-    factor.id === "mile_time"
-      ? parseMile(value)
-      : Number(value);
+    factor.id === "mile_time" ? parseMile(value) : Number(value);
 
   if (!Number.isFinite(numeric)) return 0;
 
-  const { min, max, better } =
-    factor.domain;
+  const { min, max, better } = factor.domain;
 
-  numeric = Math.max(
-    min,
-    Math.min(max, numeric)
-  );
+  numeric = Math.max(min, Math.min(max, numeric));
 
-  const progress =
-    (numeric - min) / (max - min);
+  const progress = (numeric - min) / (max - min);
 
   if (better === "higher") {
-    return Math.round(
-      clamp01(progress) * 100
-    );
+    return Math.round(clamp01(progress) * 100);
   }
 
-  return Math.round(
-    (1 - clamp01(progress)) * 100
-  );
+  return Math.round((1 - clamp01(progress)) * 100);
 }
 
-function calculateScore(
-  answers: Record<string, any> = {}
-) {
+function calculateScore(answers: Record<string, any> = {}) {
   const totalWeight = FACTORS.reduce(
-    (total, factor) =>
-      total + factor.weight,
+    (total, factor) => total + factor.weight,
     0
   );
 
   const weighted = FACTORS.reduce(
     (total, factor) =>
-      total +
-      factorScore(factor, answers) *
-        factor.weight,
+      total + factorScore(factor, answers) * factor.weight,
     0
   );
 
   if (!totalWeight) return 0;
 
-  return Math.round(
-    (weighted / totalWeight) * 10
-  );
+  return Math.round((weighted / totalWeight) * 10);
 }
 
 function levelFor(score: number) {
   if (score >= 900) {
-    return {
-      name: "APEX",
-      description: "Elite presence.",
-    };
+    return { name: "APEX", description: "Elite presence." };
   }
 
   if (score >= 750) {
-    return {
-      name: "ALPHA",
-      description: "High performer.",
-    };
+    return { name: "ALPHA", description: "High performer." };
   }
 
   if (score >= 500) {
-    return {
-      name: "CONTENDER",
-      description: "Solid foundation.",
-    };
+    return { name: "CONTENDER", description: "Solid foundation." };
   }
 
   if (score >= 250) {
-    return {
-      name: "RISING",
-      description: "Early gains.",
-    };
+    return { name: "RISING", description: "Early gains." };
   }
 
-  return {
-    name: "GETTING STARTED",
-    description: "Stack small wins.",
-  };
+  return { name: "GETTING STARTED", description: "Stack small wins." };
 }
 
 function getFactors(ids: string[]) {
   return ids
-    .map((id) =>
-      FACTORS.find(
-        (factor) => factor.id === id
-      )
-    )
+    .map((id) => FACTORS.find((factor) => factor.id === id))
     .filter(Boolean) as Factor[];
 }
 
 /* =========================================================
-   INPUT COMPONENT
+   INPUT
    ========================================================= */
 
 function NumberInput({
@@ -838,21 +758,17 @@ function NumberInput({
         max={max}
         step={step}
         disabled={disabled}
-        onChange={(event) =>
-          onChange(event.target.value)
-        }
+        onChange={(event) => onChange(event.target.value)}
         style={{
           ...inputStyle,
           opacity: disabled ? 0.55 : 1,
-          cursor: disabled
-            ? "not-allowed"
-            : "text",
+          cursor: disabled ? "not-allowed" : "text",
         }}
       />
 
       {unit && (
         <div style={helperStyle}>
-          {unit} • Range {min}–{max}
+          {unit} • Range {min}-{max}
         </div>
       )}
     </div>
@@ -871,49 +787,28 @@ function FactorField({
 }: {
   factor: Factor;
   answers: Record<string, any>;
-  updateAnswer: (
-    id: string,
-    value: any
-  ) => void;
+  updateAnswer: (id: string, value: any) => void;
   adminMode: boolean;
 }) {
-  if (factor.kind === "checklist") {
-    return null;
-  }
+  if (factor.kind === "checklist") return null;
 
   if (factor.kind === "select") {
     return (
       <div>
-        <div style={labelStyle}>
-          {factor.label}
-        </div>
+        <div style={labelStyle}>{factor.label}</div>
 
         <select
-          value={
-            answers[factor.id] ?? ""
-          }
-          onChange={(event) =>
-            updateAnswer(
-              factor.id,
-              event.target.value
-            )
-          }
+          value={answers[factor.id] ?? ""}
+          onChange={(event) => updateAnswer(factor.id, event.target.value)}
           style={inputStyle}
         >
-          <option value="">
-            Select...
-          </option>
+          <option value="">Select...</option>
 
-          {factor.options.map(
-            (option) => (
-              <option
-                key={option.label}
-                value={option.value}
-              >
-                {option.label}
-              </option>
-            )
-          )}
+          {factor.options.map((option) => (
+            <option key={option.label} value={option.value}>
+              {option.label}
+            </option>
+          ))}
         </select>
       </div>
     );
@@ -927,39 +822,25 @@ function FactorField({
     factor.id === "hit_number" ||
     factor.id === "alpha_look" ||
     factor.id === "alpha_bonus" ||
-    factor.id.startsWith(
-      "knowledge_"
-    )
+    factor.id.startsWith("knowledge_")
   ) {
     step = 1;
   }
 
-  if (factor.id === "mile_time") {
-    step = 0.01;
-  }
+  if (factor.id === "mile_time") step = 0.01;
 
-  const disabled =
-    !!factor.adminOnly && !adminMode;
+  const disabled = !!factor.adminOnly && !adminMode;
 
   return (
     <div>
       <div style={labelStyle}>
         {factor.label}
-        {factor.adminOnly &&
-          !adminMode &&
-          " • Admin rated"}
+        {factor.adminOnly && !adminMode && " • Admin rated"}
       </div>
 
       <NumberInput
-        value={
-          answers[factor.id] ?? ""
-        }
-        onChange={(value) =>
-          updateAnswer(
-            factor.id,
-            value
-          )
-        }
+        value={answers[factor.id] ?? ""}
+        onChange={(value) => updateAnswer(factor.id, value)}
         min={factor.domain.min}
         max={factor.domain.max}
         step={step}
@@ -986,31 +867,21 @@ function FactorSection({
   description?: string;
   factors: Factor[];
   answers: Record<string, any>;
-  updateAnswer: (
-    id: string,
-    value: any
-  ) => void;
+  updateAnswer: (id: string, value: any) => void;
   adminMode: boolean;
 }) {
   return (
     <section style={card}>
-      <h2 style={sectionTitle}>
-        {title}
-      </h2>
+      <h2 style={sectionTitle}>{title}</h2>
 
       {description && (
-        <div
-          style={sectionDescription}
-        >
-          {description}
-        </div>
+        <div style={sectionDescription}>{description}</div>
       )}
 
       <div
         style={{
           display: "grid",
-          gridTemplateColumns:
-            "repeat(auto-fit, minmax(215px, 1fr))",
+          gridTemplateColumns: "repeat(auto-fit, minmax(215px, 1fr))",
           gap: 15,
         }}
       >
@@ -1019,9 +890,7 @@ function FactorSection({
             key={factor.id}
             factor={factor}
             answers={answers}
-            updateAnswer={
-              updateAnswer
-            }
+            updateAnswer={updateAnswer}
             adminMode={adminMode}
           />
         ))}
@@ -1035,85 +904,34 @@ function FactorSection({
    ========================================================= */
 
 export default function Page() {
-  const [users, setUsers] =
-    useState<
-      Record<string, UserRecord>
-    >({});
+  const [users, setUsers] = useState<Record<string, UserRecord>>({});
+  const [storageLoaded, setStorageLoaded] = useState(false);
 
-  const [storageLoaded, setStorageLoaded] =
-    useState(false);
+  const [currentEmail, setCurrentEmail] = useState<string | null>(null);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loginMode, setLoginMode] = useState(true);
 
-  const [currentEmail, setCurrentEmail] =
-    useState<string | null>(null);
+  const [view, setView] = useState<"profile" | "leaderboard">("profile");
 
-  const [email, setEmail] =
-    useState("");
+  const [name, setName] = useState("");
+  const [profilePhoto, setProfilePhoto] = useState<string>();
+  const [assessmentPhoto, setAssessmentPhoto] = useState<string>();
+  const [bonusPhotos, setBonusPhotos] = useState<string[]>([]);
+  const [answers, setAnswers] = useState<Record<string, any>>({});
 
-  const [password, setPassword] =
-    useState("");
-
-  const [
-    loginMode,
-    setLoginMode,
-  ] = useState(true);
-
-  const [view, setView] =
-    useState<"profile" | "leaderboard">(
-      "profile"
-    );
-
-  const [name, setName] =
-    useState("");
-
-  const [
-    profilePhoto,
-    setProfilePhoto,
-  ] = useState<string>();
-
-  const [
-    assessmentPhoto,
-    setAssessmentPhoto,
-  ] = useState<string>();
-
-  const [
-    bonusPhotos,
-    setBonusPhotos,
-  ] = useState<string[]>([]);
-
-  const [answers, setAnswers] =
-    useState<Record<string, any>>(
-      {}
-    );
-
-  /* ADMIN TEST MODE
-     For this testing build, the first
-     account created becomes the admin.
-  */
-
-  const currentUser =
-    currentEmail
-      ? users[currentEmail]
-      : undefined;
-
-  const adminMode =
-    !!currentUser?.isAdmin;
-
-  /* LOAD STORAGE */
+  const currentUser = currentEmail ? users[currentEmail] : undefined;
+  const adminMode = !!currentUser?.isAdmin;
 
   useEffect(() => {
     setUsers(loadUsers());
     setStorageLoaded(true);
   }, []);
 
-  /* SAVE STORAGE */
-
   useEffect(() => {
     if (!storageLoaded) return;
-
     persistUsers(users);
   }, [users, storageLoaded]);
-
-  /* LOAD CURRENT PROFILE */
 
   useEffect(() => {
     if (!currentEmail) return;
@@ -1122,39 +940,35 @@ export default function Page() {
 
     if (!user) return;
 
-    setName(
-      user.profile?.name || ""
-    );
-
-    setProfilePhoto(
-      user.profile?.profilePhoto
-    );
-
-    setAssessmentPhoto(
-      user.profile
-        ?.assessmentPhoto
-    );
-
-    setBonusPhotos(
-      user.profile
-        ?.extraAlphaPhotos || []
-    );
-
-    setAnswers(
-      user.answers || {}
-    );
+    setName(user.profile?.name || "");
+    setProfilePhoto(user.profile?.profilePhoto);
+    setAssessmentPhoto(user.profile?.assessmentPhoto);
+    setBonusPhotos(user.profile?.extraAlphaPhotos || []);
+    setAnswers(user.answers || {});
   }, [currentEmail]);
 
-  /* SCORE */
+  const clubNumber =
+    (Number(answers.max_bench) || 0) +
+    (Number(answers.max_squat) || 0) +
+    (Number(answers.max_deadlift) || 0);
 
-  const score = useMemo(
-    () => calculateScore(answers),
-    [answers]
-  );
+  const clubName =
+    clubNumber >= 1000
+      ? "1000 LB CLUB"
+      : clubNumber >= 900
+      ? "900 LB CLUB"
+      : clubNumber >= 800
+      ? "800 LB CLUB"
+      : clubNumber >= 700
+      ? "700 LB CLUB"
+      : clubNumber >= 600
+      ? "600 LB CLUB"
+      : clubNumber >= 500
+      ? "500 LB CLUB"
+      : "BUILDING";
 
+  const score = useMemo(() => calculateScore(answers), [answers]);
   const level = levelFor(score);
-
-  /* GROUPS */
 
   const strength = getFactors([
     "max_bench",
@@ -1172,15 +986,21 @@ export default function Page() {
     "workout_days",
   ]);
 
-  const anthropometrics =
-    getFactors([
-      "chest_size",
-      "arm_size",
-      "quad_size",
-      "shoulder_size",
-      "height",
-      "body_fat",
-    ]);
+  const bodyStats = getFactors([
+    "weight",
+    "chest_size",
+    "biceps_flexed",
+    "biceps_relaxed",
+    "forearms",
+    "quad_size",
+    "shoulder_size",
+    "waist",
+    "glutes",
+    "calves",
+    "neck",
+    "height",
+    "body_fat",
+  ]);
 
   const appearance = getFactors([
     "shoe_size",
@@ -1190,92 +1010,60 @@ export default function Page() {
     "hand_size",
   ]);
 
-  const knowledge =
-    FACTORS.filter((factor) =>
-      factor.id.startsWith(
-        "knowledge_"
-      )
-    );
+  const knowledge = FACTORS.filter((factor) =>
+    factor.id.startsWith("knowledge_")
+  );
 
   const life = getFactors([
     "children_count",
     "hit_number",
   ]);
 
-  const adminFactors =
-    getFactors([
-      "alpha_look",
-      "alpha_bonus",
-    ]);
+  const adminFactors = getFactors([
+    "alpha_look",
+    "alpha_bonus",
+  ]);
 
-  const activityFactor =
-    FACTORS.find(
-      (factor) =>
-        factor.kind ===
-          "checklist" &&
-        factor.id ===
-          "activities"
-    );
+  const activityFactor = FACTORS.find(
+    (factor) =>
+      factor.kind === "checklist" &&
+      factor.id === "activities"
+  );
 
   const activities =
-    activityFactor?.kind ===
-    "checklist"
+    activityFactor?.kind === "checklist"
       ? activityFactor.items
       : [];
 
   const activityAnswers =
-    answers.activities &&
-    typeof answers.activities ===
-      "object"
+    answers.activities && typeof answers.activities === "object"
       ? answers.activities
       : {};
 
-  /* AUTH */
-
   async function authenticate() {
-    const cleanEmail =
-      email
-        .trim()
-        .toLowerCase();
+    const cleanEmail = email.trim().toLowerCase();
 
-    if (
-      !cleanEmail ||
-      !password
-    ) {
-      alert(
-        "Enter an email and password."
-      );
+    if (!cleanEmail || !password) {
+      alert("Enter an email and password.");
       return;
     }
 
-    const hash =
-      await sha256(password);
+    const hash = await sha256(password);
 
     if (loginMode) {
-      const user =
-        users[cleanEmail];
+      const user = users[cleanEmail];
 
       if (!user) {
-        alert(
-          "No account found. Create one instead."
-        );
+        alert("No account found. Create one instead.");
         return;
       }
 
-      if (
-        user.passwordHash !==
-        hash
-      ) {
-        alert(
-          "Incorrect password."
-        );
+      if (user.passwordHash !== hash) {
+        alert("Incorrect password.");
         return;
       }
 
-      setCurrentEmail(
-        cleanEmail
-      );
-
+      setCurrentEmail(cleanEmail);
       setPassword("");
       setView("profile");
 
@@ -1283,15 +1071,11 @@ export default function Page() {
     }
 
     if (users[cleanEmail]) {
-      alert(
-        "That account already exists."
-      );
+      alert("That account already exists.");
       return;
     }
 
-    const firstAccount =
-      Object.keys(users).length ===
-      0;
+    const firstAccount = Object.keys(users).length === 0;
 
     const newUser: UserRecord = {
       passwordHash: hash,
@@ -1303,19 +1087,13 @@ export default function Page() {
 
     setUsers((previous) => ({
       ...previous,
-      [cleanEmail]:
-        newUser,
+      [cleanEmail]: newUser,
     }));
 
-    setCurrentEmail(
-      cleanEmail
-    );
-
+    setCurrentEmail(cleanEmail);
     setName("");
     setProfilePhoto(undefined);
-    setAssessmentPhoto(
-      undefined
-    );
+    setAssessmentPhoto(undefined);
     setBonusPhotos([]);
     setAnswers({});
     setPassword("");
@@ -1328,106 +1106,61 @@ export default function Page() {
     setPassword("");
     setName("");
     setProfilePhoto(undefined);
-    setAssessmentPhoto(
-      undefined
-    );
+    setAssessmentPhoto(undefined);
     setBonusPhotos([]);
     setAnswers({});
     setView("profile");
   }
 
-  /* ANSWERS */
-
-  function updateAnswer(
-    id: string,
-    value: any
-  ) {
+  function updateAnswer(id: string, value: any) {
     setAnswers((previous) => ({
       ...previous,
       [id]: value,
     }));
   }
 
-  function toggleActivity(
-    id: string
-  ) {
-    updateAnswer(
-      "activities",
-      {
-        ...activityAnswers,
-        [id]:
-          !activityAnswers[id],
-      }
-    );
+  function toggleActivity(id: string) {
+    updateAnswer("activities", {
+      ...activityAnswers,
+      [id]: !activityAnswers[id],
+    });
   }
 
-  /* PHOTOS */
-
-  async function uploadProfilePhoto(
-    file?: File
-  ) {
+  async function uploadProfilePhoto(file?: File) {
     if (!file) return;
-
-    const url =
-      await fileToDataURL(file);
-
+    const url = await fileToDataURL(file);
     setProfilePhoto(url);
   }
 
-  async function uploadAssessmentPhoto(
-    file?: File
-  ) {
+  async function uploadAssessmentPhoto(file?: File) {
     if (!file) return;
-
-    const url =
-      await fileToDataURL(file);
-
+    const url = await fileToDataURL(file);
     setAssessmentPhoto(url);
   }
 
-  async function uploadBonusPhotos(
-    files: FileList | null
-  ) {
+  async function uploadBonusPhotos(files: FileList | null) {
     if (!files?.length) return;
 
-    const converted: string[] =
-      [];
+    const converted: string[] = [];
 
-    for (const file of Array.from(
-      files
-    )) {
-      converted.push(
-        await fileToDataURL(file)
-      );
+    for (const file of Array.from(files)) {
+      converted.push(await fileToDataURL(file));
     }
 
-    setBonusPhotos(
-      (previous) => [
-        ...previous,
-        ...converted,
-      ]
-    );
+    setBonusPhotos((previous) => [...previous, ...converted]);
   }
 
-  function removeBonusPhoto(
-    index: number
-  ) {
-    setBonusPhotos(
-      (previous) =>
-        previous.filter(
-          (_, i) => i !== index
-        )
+  function removeBonusPhoto(index: number) {
+    setBonusPhotos((previous) =>
+      previous.filter((_, i) => i !== index)
     );
   }
-
-  /* SAVE PROFILE */
 
   function saveProfile() {
     if (!currentEmail) return;
 
     setUsers((previous) => {
-      const existing =
-        previous[currentEmail];
+      const existing = previous[currentEmail];
 
       return {
         ...previous,
@@ -1439,14 +1172,11 @@ export default function Page() {
             name,
             profilePhoto,
             assessmentPhoto,
-            extraAlphaPhotos:
-              bonusPhotos,
+            extraAlphaPhotos: bonusPhotos,
           },
 
           answers,
-
-          isAdmin:
-            existing?.isAdmin,
+          isAdmin: existing?.isAdmin,
         },
       };
     });
@@ -1454,27 +1184,18 @@ export default function Page() {
     alert("Profile saved.");
   }
 
-  /* RESET */
-
   function resetAnswers() {
-    const confirmed =
-      window.confirm(
-        "Reset all Alpha Status answers? Your account and photos will remain."
-      );
+    const confirmed = window.confirm(
+      "Reset all Alpha Status answers? Your account and photos will remain."
+    );
 
     if (!confirmed) return;
 
     setAnswers({});
   }
 
-  /* CSV */
-
   function exportCSV() {
-    const factorIds =
-      FACTORS.map(
-        (factor) =>
-          factor.id
-      );
+    const factorIds = FACTORS.map((factor) => factor.id);
 
     const rows: string[][] = [
       [
@@ -1483,144 +1204,96 @@ export default function Page() {
         "admin",
         "score1000",
         "level",
+        "clubTotal",
         ...factorIds,
       ],
     ];
 
-    Object.entries(users).forEach(
-      ([userEmail, user]) => {
-        const userAnswers =
-          user.answers || {};
+    Object.entries(users).forEach(([userEmail, user]) => {
+      const userAnswers = user.answers || {};
+      const userScore = calculateScore(userAnswers);
 
-        const userScore =
-          calculateScore(
-            userAnswers
-          );
+      const userClubTotal =
+        (Number(userAnswers.max_bench) || 0) +
+        (Number(userAnswers.max_squat) || 0) +
+        (Number(userAnswers.max_deadlift) || 0);
 
-        const factorValues =
-          factorIds.map((id) => {
-            const value =
-              userAnswers[id];
+      const factorValues = factorIds.map((id) => {
+        const value = userAnswers[id];
 
-            if (
-              value &&
-              typeof value ===
-                "object"
-            ) {
-              return Object.entries(
-                value
-              )
-                .filter(
-                  ([, checked]) =>
-                    !!checked
-                )
-                .map(
-                  ([key]) => key
-                )
-                .join(";");
-            }
+        if (value && typeof value === "object") {
+          return Object.entries(value)
+            .filter(([, checked]) => !!checked)
+            .map(([key]) => key)
+            .join(";");
+        }
 
-            return value ===
-              undefined
-              ? ""
-              : String(value);
-          });
+        return value === undefined ? "" : String(value);
+      });
 
-        rows.push([
-          userEmail,
-          user.profile?.name ||
-            "",
-          user.isAdmin
-            ? "1"
-            : "0",
-          String(userScore),
-          levelFor(
-            userScore
-          ).name,
-          ...factorValues,
-        ]);
-      }
-    );
+      rows.push([
+        userEmail,
+        user.profile?.name || "",
+        user.isAdmin ? "1" : "0",
+        String(userScore),
+        levelFor(userScore).name,
+        String(userClubTotal),
+        ...factorValues,
+      ]);
+    });
 
     const csv = rows
       .map((row) =>
         row
           .map(
             (cell) =>
-              `"${String(
-                cell
-              ).replace(
-                /"/g,
-                '""'
-              )}"`
+              `"${String(cell).replace(/"/g, '""')}"`
           )
           .join(",")
       )
       .join("\n");
 
-    const blob =
-      new Blob([csv], {
-        type: "text/csv;charset=utf-8",
-      });
+    const blob = new Blob([csv], {
+      type: "text/csv;charset=utf-8",
+    });
 
-    const url =
-      URL.createObjectURL(blob);
-
-    const link =
-      document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
 
     link.href = url;
+    link.download = `alpha_status_${Date.now()}.csv`;
 
-    link.download =
-      `alpha_status_${Date.now()}.csv`;
-
-    document.body.appendChild(
-      link
-    );
-
+    document.body.appendChild(link);
     link.click();
     link.remove();
 
     URL.revokeObjectURL(url);
   }
 
-  /* LEADERBOARD */
+  const leaderboard = useMemo(() => {
+    return Object.entries(users)
+      .map(([userEmail, user]) => {
+        const userAnswers = user.answers || {};
+        const userScore = calculateScore(userAnswers);
 
-  const leaderboard =
-    useMemo(() => {
-      return Object.entries(users)
-        .map(
-          ([userEmail, user]) => {
-            const userScore =
-              calculateScore(
-                user.answers || {}
-              );
+        const userClubTotal =
+          (Number(userAnswers.max_bench) || 0) +
+          (Number(userAnswers.max_squat) || 0) +
+          (Number(userAnswers.max_deadlift) || 0);
 
-            return {
-              email: userEmail,
-              name:
-                user.profile?.name ||
-                userEmail,
-              photo:
-                user.profile
-                  ?.profilePhoto,
-              score: userScore,
-              level:
-                levelFor(
-                  userScore
-                ).name,
-            };
-          }
-        )
-        .sort(
-          (a, b) =>
-            b.score - a.score
-        );
-    }, [users]);
+        return {
+          email: userEmail,
+          name: user.profile?.name || userEmail,
+          photo: user.profile?.profilePhoto,
+          score: userScore,
+          level: levelFor(userScore).name,
+          clubTotal: userClubTotal,
+        };
+      })
+      .sort((a, b) => b.score - a.score);
+  }, [users]);
 
-  /* =========================================================
-     LOGIN SCREEN
-     ========================================================= */
+  /* LOGIN */
 
   if (!currentEmail) {
     return (
@@ -1635,12 +1308,7 @@ export default function Page() {
         <Background />
 
         <div style={pageWrap}>
-          <div
-            style={{
-              textAlign: "center",
-              paddingTop: 45,
-            }}
-          >
+          <div style={{ textAlign: "center", paddingTop: 45 }}>
             <div
               style={{
                 fontSize: 12,
@@ -1663,14 +1331,8 @@ export default function Page() {
               ALPHA STATUS
             </h1>
 
-            <div
-              style={{
-                color: "#cbd5e1",
-                fontSize: 14,
-              }}
-            >
-              Strength. Capability.
-              Presence.
+            <div style={{ color: "#cbd5e1", fontSize: 14 }}>
+              Strength. Capability. Presence.
             </div>
           </div>
 
@@ -1681,16 +1343,8 @@ export default function Page() {
               margin: "45px auto 0",
             }}
           >
-            <h2
-              style={{
-                margin:
-                  "0 0 5px",
-                fontSize: 23,
-              }}
-            >
-              {loginMode
-                ? "Enter the Den"
-                : "Create Your Profile"}
+            <h2 style={{ margin: "0 0 5px", fontSize: 23 }}>
+              {loginMode ? "Enter the Den" : "Create Your Profile"}
             </h2>
 
             <div
@@ -1700,8 +1354,7 @@ export default function Page() {
                 marginBottom: 18,
               }}
             >
-              Build your score.
-              Earn your status.
+              Build your score. Earn your status.
             </div>
 
             <div
@@ -1712,111 +1365,50 @@ export default function Page() {
               }}
             >
               <button
-                style={
-                  loginMode
-                    ? primaryButton
-                    : lightButton
-                }
-                onClick={() =>
-                  setLoginMode(
-                    true
-                  )
-                }
+                style={loginMode ? primaryButton : lightButton}
+                onClick={() => setLoginMode(true)}
               >
                 Login
               </button>
 
               <button
-                style={
-                  !loginMode
-                    ? primaryButton
-                    : lightButton
-                }
-                onClick={() =>
-                  setLoginMode(
-                    false
-                  )
-                }
+                style={!loginMode ? primaryButton : lightButton}
+                onClick={() => setLoginMode(false)}
               >
                 Create Account
               </button>
             </div>
 
-            <div
-              style={{
-                display: "grid",
-                gap: 14,
-              }}
-            >
+            <div style={{ display: "grid", gap: 14 }}>
               <label>
-                <div
-                  style={
-                    labelStyle
-                  }
-                >
-                  Email
-                </div>
+                <div style={labelStyle}>Email</div>
 
                 <input
                   type="email"
                   value={email}
                   style={inputStyle}
-                  onChange={(
-                    event
-                  ) =>
-                    setEmail(
-                      event.target
-                        .value
-                    )
-                  }
+                  onChange={(event) => setEmail(event.target.value)}
                 />
               </label>
 
               <label>
-                <div
-                  style={
-                    labelStyle
-                  }
-                >
-                  Password
-                </div>
+                <div style={labelStyle}>Password</div>
 
                 <input
                   type="password"
                   value={password}
                   style={inputStyle}
-                  onChange={(
-                    event
-                  ) =>
-                    setPassword(
-                      event.target
-                        .value
-                    )
-                  }
-                  onKeyDown={(
-                    event
-                  ) => {
-                    if (
-                      event.key ===
-                      "Enter"
-                    ) {
+                  onChange={(event) => setPassword(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
                       authenticate();
                     }
                   }}
                 />
               </label>
 
-              <button
-                style={
-                  primaryButton
-                }
-                onClick={
-                  authenticate
-                }
-              >
-                {loginMode
-                  ? "Sign In"
-                  : "Create Account"}
+              <button style={primaryButton} onClick={authenticate}>
+                {loginMode ? "Sign In" : "Create Account"}
               </button>
             </div>
           </div>
@@ -1825,9 +1417,7 @@ export default function Page() {
     );
   }
 
-  /* =========================================================
-     LEADERBOARD VIEW
-     ========================================================= */
+  /* LEADERBOARD */
 
   if (view === "leaderboard") {
     return (
@@ -1843,250 +1433,151 @@ export default function Page() {
 
         <div style={pageWrap}>
           <Header
-            email={
-              currentEmail
-            }
+            email={currentEmail}
             view={view}
             setView={setView}
-            exportCSV={
-              exportCSV
-            }
+            exportCSV={exportCSV}
             logout={logout}
           />
 
-          <section
-            style={card}
-          >
+          <section style={card}>
             <div
               style={{
                 display: "flex",
-                justifyContent:
-                  "space-between",
-                alignItems:
-                  "flex-end",
+                justifyContent: "space-between",
+                alignItems: "flex-end",
                 gap: 12,
                 marginBottom: 20,
               }}
             >
               <div>
-                <h2
-                  style={{
-                    ...sectionTitle,
-                    fontSize: 28,
-                  }}
-                >
+                <h2 style={{ ...sectionTitle, fontSize: 28 }}>
                   LEADERBOARD
                 </h2>
 
                 <div
                   style={{
-                    color:
-                      "#94a3b8",
+                    color: "#94a3b8",
                     fontSize: 12,
                     marginTop: 5,
                   }}
                 >
-                  Alpha Status
-                  rankings on this
-                  browser.
+                  Alpha Status rankings on this browser.
                 </div>
               </div>
 
-              <div
-                style={{
-                  color:
-                    "#94a3b8",
-                  fontSize: 12,
-                }}
-              >
-                {
-                  leaderboard.length
-                }{" "}
-                competitors
+              <div style={{ color: "#94a3b8", fontSize: 12 }}>
+                {leaderboard.length} competitors
               </div>
             </div>
 
-            {leaderboard.length ===
-            0 ? (
-              <div
-                style={{
-                  color:
-                    "#94a3b8",
-                }}
-              >
-                No competitors
-                yet.
-              </div>
-            ) : (
-              <div
-                style={{
-                  display: "grid",
-                  gap: 10,
-                }}
-              >
-                {leaderboard.map(
-                  (person, index) => (
+            <div style={{ display: "grid", gap: 10 }}>
+              {leaderboard.map((person, index) => (
+                <div
+                  key={person.email}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 13,
+                    padding: 12,
+                    border: "1px solid rgba(255,255,255,.10)",
+                    borderRadius: 12,
+                    background:
+                      index === 0
+                        ? "rgba(127,29,29,.35)"
+                        : "rgba(15,23,42,.72)",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 36,
+                      textAlign: "center",
+                      fontSize: 22,
+                      fontWeight: 950,
+                    }}
+                  >
+                    {index + 1}
+                  </div>
+
+                  <div
+                    style={{
+                      width: 58,
+                      height: 58,
+                      borderRadius: 12,
+                      overflow: "hidden",
+                      background: "#020617",
+                      border: "1px solid rgba(255,255,255,.15)",
+                      flexShrink: 0,
+                    }}
+                  >
+                    {person.photo ? (
+                      <img
+                        src={person.photo}
+                        alt={person.name}
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          objectFit: "cover",
+                        }}
+                      />
+                    ) : (
+                      <div
+                        style={{
+                          height: "100%",
+                          display: "grid",
+                          placeItems: "center",
+                          color: "#64748b",
+                          fontSize: 10,
+                        }}
+                      >
+                        NO PHOTO
+                      </div>
+                    )}
+                  </div>
+
+                  <div style={{ flex: 1, minWidth: 0 }}>
                     <div
-                      key={
-                        person.email
-                      }
                       style={{
-                        display:
-                          "flex",
-                        alignItems:
-                          "center",
-                        gap: 13,
-                        padding: 12,
-                        border:
-                          "1px solid rgba(255,255,255,.10)",
-                        borderRadius: 12,
-                        background:
-                          index === 0
-                            ? "rgba(127,29,29,.35)"
-                            : "rgba(15,23,42,.72)",
+                        fontSize: 16,
+                        fontWeight: 900,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
                       }}
                     >
-                      <div
-                        style={{
-                          width: 36,
-                          textAlign:
-                            "center",
-                          fontSize: 22,
-                          fontWeight: 950,
-                        }}
-                      >
-                        {index +
-                          1}
-                      </div>
-
-                      <div
-                        style={{
-                          width: 58,
-                          height: 58,
-                          borderRadius: 12,
-                          overflow:
-                            "hidden",
-                          background:
-                            "#020617",
-                          border:
-                            "1px solid rgba(255,255,255,.15)",
-                          flexShrink: 0,
-                        }}
-                      >
-                        {person.photo ? (
-                          <img
-                            src={
-                              person.photo
-                            }
-                            alt={
-                              person.name
-                            }
-                            style={{
-                              width:
-                                "100%",
-                              height:
-                                "100%",
-                              objectFit:
-                                "cover",
-                            }}
-                          />
-                        ) : (
-                          <div
-                            style={{
-                              height:
-                                "100%",
-                              display:
-                                "grid",
-                              placeItems:
-                                "center",
-                              color:
-                                "#64748b",
-                              fontSize: 10,
-                            }}
-                          >
-                            NO PHOTO
-                          </div>
-                        )}
-                      </div>
-
-                      <div
-                        style={{
-                          flex: 1,
-                          minWidth: 0,
-                        }}
-                      >
-                        <div
-                          style={{
-                            fontSize: 16,
-                            fontWeight: 900,
-                            overflow:
-                              "hidden",
-                            textOverflow:
-                              "ellipsis",
-                            whiteSpace:
-                              "nowrap",
-                          }}
-                        >
-                          {
-                            person.name
-                          }
-                        </div>
-
-                        <div
-                          style={{
-                            color:
-                              "#94a3b8",
-                            fontSize: 11,
-                            marginTop: 3,
-                          }}
-                        >
-                          {
-                            person.level
-                          }
-                        </div>
-                      </div>
-
-                      <div
-                        style={{
-                          textAlign:
-                            "right",
-                        }}
-                      >
-                        <div
-                          style={{
-                            fontSize: 26,
-                            fontWeight: 950,
-                          }}
-                        >
-                          {
-                            person.score
-                          }
-                        </div>
-
-                        <div
-                          style={{
-                            fontSize: 10,
-                            color:
-                              "#94a3b8",
-                          }}
-                        >
-                          /1000
-                        </div>
-                      </div>
+                      {person.name}
                     </div>
-                  )
-                )}
-              </div>
-            )}
+
+                    <div
+                      style={{
+                        color: "#94a3b8",
+                        fontSize: 11,
+                        marginTop: 3,
+                      }}
+                    >
+                      {person.level} • {person.clubTotal} LB Total
+                    </div>
+                  </div>
+
+                  <div style={{ textAlign: "right" }}>
+                    <div style={{ fontSize: 26, fontWeight: 950 }}>
+                      {person.score}
+                    </div>
+
+                    <div style={{ fontSize: 10, color: "#94a3b8" }}>
+                      /1000
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </section>
         </div>
       </main>
     );
   }
 
-  /* =========================================================
-     PROFILE VIEW
-     ========================================================= */
+  /* PROFILE */
 
   return (
     <main
@@ -2108,12 +1599,7 @@ export default function Page() {
           logout={logout}
         />
 
-        <div
-          style={{
-            display: "grid",
-            gap: 18,
-          }}
-        >
+        <div style={{ display: "grid", gap: 18 }}>
           {/* SCORE */}
 
           <section
@@ -2146,94 +1632,50 @@ export default function Page() {
               {score}
             </div>
 
-            <div
-              style={{
-                color: "#94a3b8",
-                fontSize: 13,
-                marginTop: 3,
-              }}
-            >
+            <div style={{ color: "#94a3b8", fontSize: 13, marginTop: 3 }}>
               OUT OF 1000
             </div>
 
-            <div
-              style={{
-                fontSize: 24,
-                fontWeight: 950,
-                marginTop: 13,
-              }}
-            >
+            <div style={{ fontSize: 24, fontWeight: 950, marginTop: 13 }}>
               {level.name}
             </div>
 
-            <div
-              style={{
-                color: "#cbd5e1",
-                fontSize: 13,
-                marginTop: 4,
-              }}
-            >
-              {
-                level.description
-              }
+            <div style={{ color: "#cbd5e1", fontSize: 13, marginTop: 4 }}>
+              {level.description}
             </div>
           </section>
 
           {/* PROFILE */}
 
           <section style={card}>
-            <h2
-              style={sectionTitle}
-            >
-              Profile
-            </h2>
+            <h2 style={sectionTitle}>Profile</h2>
 
-            <div
-              style={
-                sectionDescription
-              }
-            >
-              Your Alpha Status
-              identity.
+            <div style={sectionDescription}>
+              Your Alpha Status identity.
             </div>
 
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns:
-                  "repeat(auto-fit,minmax(240px,1fr))",
+                gridTemplateColumns: "repeat(auto-fit,minmax(240px,1fr))",
                 gap: 20,
               }}
             >
               <div>
-                <div
-                  style={
-                    labelStyle
-                  }
-                >
-                  Display Name
-                </div>
+                <div style={labelStyle}>Display Name</div>
 
                 <input
                   value={name}
                   style={inputStyle}
                   placeholder="Your name"
-                  onChange={(
-                    event
-                  ) =>
-                    setName(
-                      event.target
-                        .value
-                    )
-                  }
+                  onChange={(event) => setName(event.target.value)}
                 />
 
                 {adminMode && (
                   <div
                     style={{
                       marginTop: 8,
-                      color:
-                        "#fca5a5",
+                      color: "#fca5a5",
                       fontSize: 11,
                       fontWeight: 800,
                     }}
@@ -2244,46 +1686,27 @@ export default function Page() {
               </div>
 
               <div>
-                <div
-                  style={
-                    labelStyle
-                  }
-                >
-                  Profile Photo
-                </div>
+                <div style={labelStyle}>Profile Photo</div>
 
                 <input
                   type="file"
                   accept="image/*"
-                  onChange={(
-                    event
-                  ) =>
-                    uploadProfilePhoto(
-                      event.target
-                        .files?.[0]
-                    )
+                  onChange={(event) =>
+                    uploadProfilePhoto(event.target.files?.[0])
                   }
                 />
 
                 {profilePhoto && (
-                  <div
-                    style={{
-                      marginTop: 12,
-                    }}
-                  >
+                  <div style={{ marginTop: 12 }}>
                     <img
-                      src={
-                        profilePhoto
-                      }
+                      src={profilePhoto}
                       alt="Profile"
                       style={{
                         width: 125,
                         height: 125,
-                        objectFit:
-                          "cover",
+                        objectFit: "cover",
                         borderRadius: 14,
-                        border:
-                          "1px solid rgba(255,255,255,.2)",
+                        border: "1px solid rgba(255,255,255,.2)",
                       }}
                     />
                   </div>
@@ -2295,50 +1718,30 @@ export default function Page() {
           {/* PHYSIQUE */}
 
           <section style={card}>
-            <h2
-              style={sectionTitle}
-            >
-              Physique Assessment
-            </h2>
+            <h2 style={sectionTitle}>Physique Assessment</h2>
 
-            <div
-              style={
-                sectionDescription
-              }
-            >
-              Add an optional
-              non-explicit physique
-              photo.
+            <div style={sectionDescription}>
+              Add an optional non-explicit physique photo.
             </div>
 
             <input
               type="file"
               accept="image/*"
               onChange={(event) =>
-                uploadAssessmentPhoto(
-                  event.target
-                    .files?.[0]
-                )
+                uploadAssessmentPhoto(event.target.files?.[0])
               }
             />
 
             {assessmentPhoto && (
-              <div
-                style={{
-                  marginTop: 15,
-                }}
-              >
+              <div style={{ marginTop: 15 }}>
                 <img
-                  src={
-                    assessmentPhoto
-                  }
+                  src={assessmentPhoto}
                   alt="Physique"
                   style={{
                     width: "100%",
                     maxWidth: 350,
                     maxHeight: 450,
-                    objectFit:
-                      "cover",
+                    objectFit: "cover",
                     borderRadius: 14,
                   }}
                 />
@@ -2349,35 +1752,20 @@ export default function Page() {
           {/* BONUS PHOTOS */}
 
           <section style={card}>
-            <h2
-              style={sectionTitle}
-            >
-              Bonus Alpha Photos
-            </h2>
+            <h2 style={sectionTitle}>Bonus Alpha Photos</h2>
 
-            <div
-              style={
-                sectionDescription
-              }
-            >
-              Fitness, competition,
-              outdoors, action or
-              lifestyle photos.
+            <div style={sectionDescription}>
+              Fitness, competition, outdoors, action or lifestyle photos.
             </div>
 
             <input
               type="file"
               accept="image/*"
               multiple
-              onChange={(event) =>
-                uploadBonusPhotos(
-                  event.target.files
-                )
-              }
+              onChange={(event) => uploadBonusPhotos(event.target.files)}
             />
 
-            {bonusPhotos.length >
-              0 && (
+            {bonusPhotos.length > 0 && (
               <div
                 style={{
                   display: "grid",
@@ -2387,74 +1775,105 @@ export default function Page() {
                   marginTop: 17,
                 }}
               >
-                {bonusPhotos.map(
-                  (
-                    photo,
-                    index
-                  ) => (
-                    <div
-                      key={index}
-                    >
-                      <img
-                        src={
-                          photo
-                        }
-                        alt={`Bonus ${
-                          index + 1
-                        }`}
-                        style={{
-                          width:
-                            "100%",
-                          height: 170,
-                          objectFit:
-                            "cover",
-                          borderRadius: 10,
-                        }}
-                      />
+                {bonusPhotos.map((photo, index) => (
+                  <div key={index}>
+                    <img
+                      src={photo}
+                      alt={`Bonus ${index + 1}`}
+                      style={{
+                        width: "100%",
+                        height: 170,
+                        objectFit: "cover",
+                        borderRadius: 10,
+                      }}
+                    />
 
-                      <button
-                        style={{
-                          ...dangerButton,
-                          width:
-                            "100%",
-                          marginTop: 6,
-                          padding:
-                            "7px 8px",
-                        }}
-                        onClick={() =>
-                          removeBonusPhoto(
-                            index
-                          )
-                        }
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  )
-                )}
+                    <button
+                      style={{
+                        ...dangerButton,
+                        width: "100%",
+                        marginTop: 6,
+                        padding: "7px 8px",
+                      }}
+                      onClick={() => removeBonusPhoto(index)}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
               </div>
             )}
           </section>
+
+          {/* STRENGTH */}
 
           <FactorSection
             title="Strength"
             description="Enter your best one-rep max."
             factors={strength}
             answers={answers}
-            updateAnswer={
-              updateAnswer
-            }
+            updateAnswer={updateAnswer}
             adminMode={adminMode}
           />
+
+          {/* CLUB TOTAL */}
+
+          <section
+            style={{
+              ...card,
+              textAlign: "center",
+              padding: "24px 20px",
+            }}
+          >
+            <div
+              style={{
+                color: "#94a3b8",
+                fontSize: 11,
+                fontWeight: 900,
+                letterSpacing: 3,
+              }}
+            >
+              STRENGTH CLUB
+            </div>
+
+            <div
+              style={{
+                fontSize: 48,
+                fontWeight: 950,
+                marginTop: 7,
+              }}
+            >
+              {clubNumber} LB
+            </div>
+
+            <div
+              style={{
+                color: "#ef4444",
+                fontSize: 20,
+                fontWeight: 900,
+                marginTop: 3,
+              }}
+            >
+              {clubName}
+            </div>
+
+            <div
+              style={{
+                color: "#94a3b8",
+                fontSize: 11,
+                marginTop: 7,
+              }}
+            >
+              Bench + Squat + Deadlift
+            </div>
+          </section>
 
           <FactorSection
             title="Member Measurements"
             description="Optional numerical measurements included in the Alpha Status formula."
             factors={member}
             answers={answers}
-            updateAnswer={
-              updateAnswer
-            }
+            updateAnswer={updateAnswer}
             adminMode={adminMode}
           />
 
@@ -2463,21 +1882,15 @@ export default function Page() {
             description="Enter mile time as mm.ss. Example: 7.30 means 7 minutes, 30 seconds."
             factors={conditioning}
             answers={answers}
-            updateAnswer={
-              updateAnswer
-            }
+            updateAnswer={updateAnswer}
             adminMode={adminMode}
           />
 
           <FactorSection
-            title="Anthropometrics"
-            factors={
-              anthropometrics
-            }
+            title="Body Stats"
+            factors={bodyStats}
             answers={answers}
-            updateAnswer={
-              updateAnswer
-            }
+            updateAnswer={updateAnswer}
             adminMode={adminMode}
           />
 
@@ -2485,9 +1898,7 @@ export default function Page() {
             title="Appearance"
             factors={appearance}
             answers={answers}
-            updateAnswer={
-              updateAnswer
-            }
+            updateAnswer={updateAnswer}
             adminMode={adminMode}
           />
 
@@ -2496,108 +1907,69 @@ export default function Page() {
             description="Rate yourself from 1 to 10 in each category."
             factors={knowledge}
             answers={answers}
-            updateAnswer={
-              updateAnswer
-            }
+            updateAnswer={updateAnswer}
             adminMode={adminMode}
           />
 
           {/* ACTIVITIES */}
 
           <section style={card}>
-            <h2
-              style={sectionTitle}
-            >
-              Activities
-            </h2>
+            <h2 style={sectionTitle}>Activities</h2>
 
-            <div
-              style={
-                sectionDescription
-              }
-            >
-              Check everything
-              you've completed.
-              Activity points are
-              capped for scoring.
+            <div style={sectionDescription}>
+              Check everything you've completed. Activity points are capped
+              for scoring.
             </div>
 
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns:
-                  "repeat(auto-fit,minmax(220px,1fr))",
+                gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))",
                 gap: 8,
               }}
             >
-              {activities.map(
-                (activity) => (
-                  <label
-                    key={
-                      activity.id
-                    }
+              {activities.map((activity) => (
+                <label
+                  key={activity.id}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 9,
+                    border: "1px solid rgba(255,255,255,.09)",
+                    borderRadius: 9,
+                    padding: "10px 11px",
+                    background: activityAnswers[activity.id]
+                      ? "rgba(127,29,29,.30)"
+                      : "rgba(2,6,23,.45)",
+                    cursor: "pointer",
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={!!activityAnswers[activity.id]}
+                    onChange={() => toggleActivity(activity.id)}
+                  />
+
+                  <span
                     style={{
-                      display:
-                        "flex",
-                      alignItems:
-                        "center",
-                      gap: 9,
-                      border:
-                        "1px solid rgba(255,255,255,.09)",
-                      borderRadius: 9,
-                      padding:
-                        "10px 11px",
-                      background:
-                        activityAnswers[
-                          activity.id
-                        ]
-                          ? "rgba(127,29,29,.30)"
-                          : "rgba(2,6,23,.45)",
-                      cursor:
-                        "pointer",
+                      flex: 1,
+                      fontSize: 13,
+                      fontWeight: 700,
                     }}
                   >
-                    <input
-                      type="checkbox"
-                      checked={
-                        !!activityAnswers[
-                          activity.id
-                        ]
-                      }
-                      onChange={() =>
-                        toggleActivity(
-                          activity.id
-                        )
-                      }
-                    />
+                    {activity.label}
+                  </span>
 
-                    <span
-                      style={{
-                        flex: 1,
-                        fontSize: 13,
-                        fontWeight: 700,
-                      }}
-                    >
-                      {
-                        activity.label
-                      }
-                    </span>
-
-                    <span
-                      style={{
-                        color:
-                          "#94a3b8",
-                        fontSize: 11,
-                      }}
-                    >
-                      +
-                      {
-                        activity.points
-                      }
-                    </span>
-                  </label>
-                )
-              )}
+                  <span
+                    style={{
+                      color: "#94a3b8",
+                      fontSize: 11,
+                    }}
+                  >
+                    +{activity.points}
+                  </span>
+                </label>
+              ))}
             </div>
           </section>
 
@@ -2605,9 +1977,7 @@ export default function Page() {
             title="Life & Family"
             factors={life}
             answers={answers}
-            updateAnswer={
-              updateAnswer
-            }
+            updateAnswer={updateAnswer}
             adminMode={adminMode}
           />
 
@@ -2618,17 +1988,13 @@ export default function Page() {
                 ? "This test account has administrator access, so you can adjust these ratings."
                 : "These ratings are locked for non-admin accounts."
             }
-            factors={
-              adminFactors
-            }
+            factors={adminFactors}
             answers={answers}
-            updateAnswer={
-              updateAnswer
-            }
+            updateAnswer={updateAnswer}
             adminMode={adminMode}
           />
 
-          {/* BOTTOM SCORE */}
+          {/* FINAL SCORE */}
 
           <section
             style={{
@@ -2645,8 +2011,7 @@ export default function Page() {
                 fontWeight: 900,
               }}
             >
-              CURRENT ALPHA
-              STATUS
+              CURRENT ALPHA STATUS
             </div>
 
             <div
@@ -2657,11 +2022,11 @@ export default function Page() {
               }}
             >
               {score}
+
               <span
                 style={{
                   fontSize: 18,
-                  color:
-                    "#94a3b8",
+                  color: "#94a3b8",
                   marginLeft: 4,
                 }}
               >
@@ -2669,57 +2034,31 @@ export default function Page() {
               </span>
             </div>
 
-            <div
-              style={{
-                fontSize: 20,
-                fontWeight: 900,
-              }}
-            >
+            <div style={{ fontSize: 20, fontWeight: 900 }}>
               {level.name}
             </div>
 
             <div
               style={{
                 display: "flex",
-                justifyContent:
-                  "center",
+                justifyContent: "center",
                 gap: 9,
                 flexWrap: "wrap",
                 marginTop: 20,
               }}
             >
-              <button
-                style={
-                  primaryButton
-                }
-                onClick={
-                  saveProfile
-                }
-              >
+              <button style={primaryButton} onClick={saveProfile}>
                 Save Profile
               </button>
 
               <button
-                style={
-                  lightButton
-                }
-                onClick={() =>
-                  setView(
-                    "leaderboard"
-                  )
-                }
+                style={lightButton}
+                onClick={() => setView("leaderboard")}
               >
                 View Leaderboard
               </button>
 
-              <button
-                style={
-                  dangerButton
-                }
-                onClick={
-                  resetAnswers
-                }
-              >
+              <button style={dangerButton} onClick={resetAnswers}>
                 Reset Answers
               </button>
             </div>
@@ -2741,11 +2080,9 @@ function Background() {
         style={{
           position: "fixed",
           inset: 0,
-          backgroundImage:
-            "url('/alpha-hero.png')",
+          backgroundImage: "url('/alpha-hero.png')",
           backgroundSize: "cover",
-          backgroundPosition:
-            "center",
+          backgroundPosition: "center",
           opacity: 0.3,
           pointerEvents: "none",
           zIndex: 0,
@@ -2779,11 +2116,7 @@ function Header({
 }: {
   email: string;
   view: "profile" | "leaderboard";
-  setView: (
-    value:
-      | "profile"
-      | "leaderboard"
-  ) => void;
+  setView: (value: "profile" | "leaderboard") => void;
   exportCSV: () => void;
   logout: () => void;
 }) {
@@ -2792,8 +2125,7 @@ function Header({
       style={{
         display: "flex",
         alignItems: "center",
-        justifyContent:
-          "space-between",
+        justifyContent: "space-between",
         flexWrap: "wrap",
         gap: 15,
         marginBottom: 22,
@@ -2830,45 +2162,24 @@ function Header({
         }}
       >
         <button
-          style={
-            view === "profile"
-              ? primaryButton
-              : lightButton
-          }
-          onClick={() =>
-            setView("profile")
-          }
+          style={view === "profile" ? primaryButton : lightButton}
+          onClick={() => setView("profile")}
         >
           My Status
         </button>
 
         <button
-          style={
-            view ===
-            "leaderboard"
-              ? primaryButton
-              : lightButton
-          }
-          onClick={() =>
-            setView(
-              "leaderboard"
-            )
-          }
+          style={view === "leaderboard" ? primaryButton : lightButton}
+          onClick={() => setView("leaderboard")}
         >
           Leaderboard
         </button>
 
-        <button
-          style={lightButton}
-          onClick={exportCSV}
-        >
+        <button style={lightButton} onClick={exportCSV}>
           Export CSV
         </button>
 
-        <button
-          style={darkButton}
-          onClick={logout}
-        >
+        <button style={darkButton} onClick={logout}>
           Sign Out
         </button>
       </div>
