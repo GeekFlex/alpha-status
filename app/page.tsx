@@ -68,6 +68,47 @@ type ChecklistFactor = {
 type Factor = NumberFactor | SelectFactor | ChecklistFactor;
 
 /* =========================================================
+   QUESTIONS
+
+   ADD YOUR OWN QUESTIONS HERE.
+   - Give every question a unique id.
+   - Change the question text.
+   - Add/remove answer choices inside options.
+   - value is the score for that answer from 0 to 100.
+   - weight controls how much that question affects Alpha Status.
+
+   Copy one whole question object and paste it below the others
+   whenever you want to add another question.
+   ========================================================= */
+
+const QUESTIONS: SelectFactor[] = [
+  {
+    kind: "select",
+    id: "question_example_1",
+    label: "How consistent are you when you set a goal?",
+    weight: 0.01,
+    options: [
+      { label: "I usually fall off", value: 25 },
+      { label: "It depends", value: 50 },
+      { label: "Usually consistent", value: 75 },
+      { label: "I finish what I start", value: 100 },
+    ],
+  },
+  {
+    kind: "select",
+    id: "question_example_2",
+    label: "How comfortable are you taking the lead?",
+    weight: 0.01,
+    options: [
+      { label: "I avoid it", value: 25 },
+      { label: "Only when needed", value: 50 },
+      { label: "Pretty comfortable", value: 75 },
+      { label: "I naturally take the lead", value: 100 },
+    ],
+  },
+];
+
+/* =========================================================
    SCORING CONFIGURATION
    ========================================================= */
 
@@ -301,7 +342,7 @@ const FACTORS: Factor[] = [
     label: "Years Lifting",
     unit: "years",
     weight: 0.025,
-    domain: { min: 0, max: 20, better: "higher" },
+    domain: { min: 0, max: 100, better: "higher" },
   },
 
   /* ATHLETIC PERFORMANCE */
@@ -388,15 +429,6 @@ const FACTORS: Factor[] = [
   },
 
   /* CONDITIONING */
-
-  {
-    kind: "number",
-    id: "workout_days",
-    label: "Fastest 1 Mile",
-    unit: "mm.ss",
-    weight: 0.08,
-    domain: { min: 0, max: 3600, better: "lower" },
-  },
 
   {
     kind: "number",
@@ -598,6 +630,7 @@ const FACTORS: Factor[] = [
       { id: "reproduce", label: "Reproduce", points: 15 },
     ],
   },
+  ...QUESTIONS,
 ];
 
 /* =========================================================
@@ -1323,6 +1356,8 @@ export default function Page() {
     factor.id.startsWith("knowledge_")
   );
 
+  const questions = getFactors(QUESTIONS.map((question) => question.id));
+
   const life = getFactors([
     "children_count",
     "hit_number",
@@ -1743,13 +1778,13 @@ export default function Page() {
     );
 
     ctx.fillStyle = "#ef4444";
-    ctx.fillRect(70, 1235, 940, 3);
+    ctx.fillRect(70, 1275, 940, 3);
     ctx.fillStyle = "#94a3b8";
-    ctx.font = "800 22px Arial";
+    ctx.font = "800 18px Arial";
     ctx.fillText(
       `${activityCount} ACTIVITIES  •  ${achievements.length} ACHIEVEMENTS`,
       70,
-      1290
+      1315
     );
 
     const url = canvas.toDataURL("image/png");
@@ -2780,6 +2815,15 @@ export default function Page() {
             title="Knowledge"
             description="Rate yourself from 1 to 10 in each category."
             factors={knowledge}
+            answers={answers}
+            updateAnswer={updateAnswer}
+            adminMode={adminMode}
+          />
+
+          <FactorSection
+            title="Questions"
+            description="Choose the answer that fits you best. These questions affect Alpha Status."
+            factors={questions}
             answers={answers}
             updateAnswer={updateAnswer}
             adminMode={adminMode}
