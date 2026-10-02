@@ -1717,8 +1717,7 @@ export default function Page() {
     });
 
     const mileText = answers.mile_time ? String(answers.mile_time) : "—";
-    const pullText = answers.max_pullups ? String(answers.max_pullups) : "—";
-    const workoutText = answers.workout_days ? String(answers.workout_days) : "—";
+    const yearsLiftingText = answers.years_lifting ? String(answers.years_lifting) : "—";
     const bodyText = [
       answers.height ? `${answers.height}"` : null,
       answers.weight ? `${answers.weight} LB` : null,
@@ -1738,34 +1737,19 @@ export default function Page() {
     ctx.fillStyle = "#f8fafc";
     ctx.font = "800 30px Arial";
     ctx.fillText(
-      `${mileText} MILE  •  ${pullText} PULL-UPS  •  ${workoutText} DAYS/WEEK`,
+      `${mileText} MILE  •  ${yearsLiftingText} YEARS LIFTING`,
       70,
       1136
     );
 
-    ctx.fillStyle = "#94a3b8";
-    ctx.font = "900 20px Arial";
-    ctx.fillText("ACHIEVEMENTS", 70, 1190);
-
-    const topAchievements = achievements.slice(-4).reverse();
-    ctx.fillStyle = "#f8fafc";
-    ctx.font = "800 26px Arial";
-    ctx.fillText(
-      topAchievements.length
-        ? topAchievements.map((item) => item.title).join("  •  ")
-        : "BUILDING THE TROPHY CASE",
-      70,
-      1230
-    );
-
     ctx.fillStyle = "#ef4444";
-    ctx.fillRect(70, 1275, 940, 3);
+    ctx.fillRect(70, 1235, 940, 3);
     ctx.fillStyle = "#94a3b8";
-    ctx.font = "800 18px Arial";
+    ctx.font = "800 22px Arial";
     ctx.fillText(
-      `${activityCount} ACTIVITIES  •  ${achievements.length} ACHIEVEMENTS  •  ${completion}% PROFILE COMPLETE`,
+      `${activityCount} ACTIVITIES  •  ${achievements.length} ACHIEVEMENTS`,
       70,
-      1315
+      1290
     );
 
     const url = canvas.toDataURL("image/png");
