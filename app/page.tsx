@@ -84,19 +84,19 @@ type Factor = NumberFactor | SelectFactor | ChecklistFactor;
 const QUESTIONS: SelectFactor[] = [
   {
     kind: "select",
-    id: "question_example_1",
-    label: "How consistent are you when you set a goal?",
+    id: "shirtless_confidence",
+    label: "Do you feel confident going shirtless in public?",
     weight: 0.01,
     options: [
-      { label: "I usually fall off", value: 25 },
-      { label: "It depends", value: 50 },
-      { label: "Usually consistent", value: 75 },
-      { label: "I finish what I start", value: 100 },
+      { label: "Hell yeah, always shirtless!", value: 100 },
+      { label: "Yes, but not always.", value: 70 },
+      { label: "I don't feel very confident.", value: 30 },
+      { label: "I don't take my shirt off in public", value: 10 },
     ],
   },
   {
     kind: "select",
-    id: "question_example_2",
+    id: "taking_lead",
     label: "How comfortable are you taking the lead?",
     weight: 0.01,
     options: [
