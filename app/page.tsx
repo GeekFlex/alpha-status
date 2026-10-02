@@ -77,7 +77,7 @@ type Factor = NumberFactor | SelectFactor | ChecklistFactor;
    - value is the score for that answer from 0 to 100.
    - weight controls how much that question affects Alpha Status.
 
-   Copy one whole question object and paste it below the others
+    Copy one whole question object and paste it below the others
    whenever you want to add another question.
    ========================================================= */
 
@@ -509,7 +509,97 @@ const FACTORS: Factor[] = [
     adminOnly: true,
   },
 
-  /* LIFE */
+  /* LIFESTYLE */
+
+  {
+    kind: "number",
+    id: "income",
+    label: "Annual Income",
+    unit: "$",
+    weight: 0.02,
+    domain: { min: 0, max: 1000000, better: "higher" },
+  },
+
+  {
+    kind: "number",
+    id: "homes",
+    label: "Homes",
+    unit: "#",
+    weight: 0.01,
+    domain: { min: 0, max: 10, better: "higher" },
+  },
+
+  {
+    kind: "number",
+    id: "boats",
+    label: "Boats",
+    unit: "#",
+    weight: 0.01,
+    domain: { min: 0, max: 10, better: "higher" },
+  },
+
+  {
+    kind: "number",
+    id: "atvs",
+    label: "ATVs",
+    unit: "#",
+    weight: 0.01,
+    domain: { min: 0, max: 10, better: "higher" },
+  },
+
+  {
+    kind: "number",
+    id: "jetskis",
+    label: "Jet Skis",
+    unit: "#",
+    weight: 0.01,
+    domain: { min: 0, max: 10, better: "higher" },
+  },
+
+  {
+    kind: "number",
+    id: "motorcycles",
+    label: "Motorcycles",
+    unit: "#",
+    weight: 0.01,
+    domain: { min: 0, max: 10, better: "higher" },
+  },
+
+  {
+    kind: "number",
+    id: "rvs",
+    label: "RVs",
+    unit: "#",
+    weight: 0.01,
+    domain: { min: 0, max: 10, better: "higher" },
+  },
+
+  {
+    kind: "number",
+    id: "campers",
+    label: "Campers",
+    unit: "#",
+    weight: 0.01,
+    domain: { min: 0, max: 10, better: "higher" },
+  },
+
+  {
+    kind: "number",
+    id: "planes",
+    label: "Planes",
+    unit: "#",
+    weight: 0.01,
+    domain: { min: 0, max: 10, better: "higher" },
+  },
+
+  {
+    kind: "number",
+    id: "dirt_bikes",
+    label: "Dirt Bikes",
+    unit: "#",
+    weight: 0.01,
+    domain: { min: 0, max: 10, better: "higher" },
+  },
 
   {
     kind: "number",
@@ -605,6 +695,20 @@ const FACTORS: Factor[] = [
       { id: "fishing", label: "Fishing", points: 5 },
       { id: "hunting", label: "Hunting", points: 10 },
       { id: "chopwood", label: "Chopping Wood", points: 5 },
+      { id: "axe_throwing", label: "Axe Throwing", points: 5 },
+      { id: "sledge_hammer", label: "Used a Sledge Hammer", points: 5 },
+
+      { id: "poured_concrete", label: "Poured Concrete", points: 10 },
+      { id: "built_deck", label: "Built a Deck", points: 15 },
+      { id: "hung_drywall", label: "Hung Drywall", points: 10 },
+      { id: "electrical", label: "Electrical Work", points: 15 },
+      { id: "plumbing", label: "Plumbing", points: 15 },
+      { id: "carpentry", label: "Carpentry", points: 15 },
+      { id: "engineering", label: "Engineering", points: 15 },
+      { id: "roofing", label: "Roofing", points: 15 },
+      { id: "brick_laying", label: "Brick Laying", points: 15 },
+      { id: "ironworking", label: "Ironworking", points: 15 },
+      { id: "welding", label: "Welding", points: 15 },
 
       { id: "bjj", label: "Brazilian Jiu-Jitsu", points: 15 },
       { id: "wrestling", label: "Wrestling", points: 15 },
@@ -1121,6 +1225,8 @@ function FactorField({
     factor.id === "dead_hang" ||
     factor.id === "children_count" ||
     factor.id === "hit_number" ||
+    factor.id === "income" ||
+    ["homes", "boats", "atvs", "jetskis", "motorcycles", "rvs", "campers", "planes", "dirt_bikes"].includes(factor.id) ||
     factor.id === "alpha_look" ||
     factor.id === "alpha_bonus" ||
     factor.id.startsWith("knowledge_")
@@ -1358,7 +1464,17 @@ export default function Page() {
 
   const questions = getFactors(QUESTIONS.map((question) => question.id));
 
-  const life = getFactors([
+  const lifestyle = getFactors([
+    "income",
+    "homes",
+    "boats",
+    "atvs",
+    "jetskis",
+    "motorcycles",
+    "rvs",
+    "campers",
+    "planes",
+    "dirt_bikes",
     "children_count",
     "hit_number",
   ]);
@@ -2982,8 +3098,8 @@ export default function Page() {
           </section>
 
           <FactorSection
-            title="Life & Family"
-            factors={life}
+            title="Lifestyle"
+            factors={lifestyle}
             answers={answers}
             updateAnswer={updateAnswer}
             adminMode={adminMode}
