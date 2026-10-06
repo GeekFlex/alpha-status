@@ -372,7 +372,7 @@ const FACTORS: Factor[] = [
     kind: "number",
     id: "dead_hang",
     label: "Dead Hang",
-    unit: "seconds",
+    unit: "HH.MM.SS",
     weight: 0.025,
     domain: { min: 0, max: 180, better: "higher" },
   },
@@ -408,7 +408,7 @@ const FACTORS: Factor[] = [
     kind: "number",
     id: "mile_time",
     label: "Fastest 1 Mile",
-    unit: "mm.ss",
+    unit: "HH.MM.SS",
     weight: 0.045,
     domain: { min: 240, max: 900, better: "lower" },
   },
@@ -417,7 +417,7 @@ const FACTORS: Factor[] = [
     kind: "number",
     id: "five_k_time",
     label: "Fastest 5K",
-    unit: "mm.ss",
+    unit: "HH.MM.SS",
     weight: 0.03,
     domain: { min: 720, max: 3600, better: "lower" },
   },
@@ -426,7 +426,7 @@ const FACTORS: Factor[] = [
     kind: "number",
     id: "hyrox_time",
     label: "Best HYROX Time",
-    unit: "mm.ss",
+    unit: "HH.MM.SS",
     weight: 0.03,
     domain: { min: 2700, max: 9000, better: "lower" },
   },
@@ -873,20 +873,65 @@ function clamp01(value: number) {
 }
 
 function parseMile(value: any) {
-  if (typeof value === "string" && value.includes(".")) {
-    const [minutesText, secondsText] = value.split(".");
+  // Timed events are entered as HH.MM.SS, e.g. 00.08.58 or 01.11.20.
+  if (typeof value === "string") {
+    const text = value.trim();
+    const parts = text.split(".");
 
-    const minutes = parseInt(minutesText || "0", 10);
-    const seconds = parseInt(secondsText || "0", 10);
+    if (parts.length === 3) {
+      const hours = Number(parts[0]);
+      const minutes = Number(parts[1]);
+      const seconds = Number(parts[2]);
 
-    if (Number.isFinite(minutes) && Number.isFinite(seconds)) {
-      return minutes * 60 + seconds;
+      if (
+        Number.isInteger(hours) &&
+        Number.isInteger(minutes) &&
+        Number.isInteger(seconds) &&
+        hours >= 0 &&
+        minutes >= 0 && minutes < 60 &&
+        seconds >= 0 && seconds < 60
+      ) {
+        return hours * 3600 + minutes * 60 + seconds;
+      }
+      return NaN;
     }
   }
 
+  // Preserve previously saved numeric-second values.
   const numeric = Number(value);
-
   return Number.isFinite(numeric) ? numeric : NaN;
+}
+
+function TimeInput({
+  value,
+  onChange,
+  disabled = false,
+}: {
+  value: any;
+  onChange: (value: string) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <div>
+      <input
+        type="text"
+        inputMode="numeric"
+        value={value ?? ""}
+        placeholder="00.00.00"
+        disabled={disabled}
+        onChange={(event) => {
+          const next = event.target.value.replace(/[^0-9.]/g, "").slice(0, 8);
+          onChange(next);
+        }}
+        style={{
+          ...inputStyle,
+          opacity: disabled ? 0.55 : 1,
+          cursor: disabled ? "not-allowed" : "text",
+        }}
+      />
+      <div style={helperStyle}>HH.MM.SS • Example: 00.08.58 = 8 min 58 sec</div>
+    </div>
+  );
 }
 
 function factorScore(factor: Factor, answers: Record<string, any>) {
@@ -920,7 +965,7 @@ function factorScore(factor: Factor, answers: Record<string, any>) {
     return 0;
   }
 
-  const timeFields = ["mile_time", "five_k_time", "hyrox_time"];
+  const timeFields = ["sprint_100m", "mile_time", "five_k_time", "hyrox_time"];
 
   let numeric =
     timeFields.includes(factor.id) ? parseMile(value) : Number(value);
@@ -1211,6 +1256,23 @@ function FactorField({
   if (["mile_time", "five_k_time", "hyrox_time"].includes(factor.id)) step = 0.01;
 
   const disabled = !!factor.adminOnly && !adminMode;
+  const isTimedEvent = ["sprint_100m", "mile_time", "five_k_time", "hyrox_time"].includes(factor.id);
+
+  if (isTimedEvent) {
+    return (
+      <div>
+        <div style={labelStyle}>
+          {factor.label}
+          {factor.adminOnly && !adminMode && " • Admin rated"}
+        </div>
+        <TimeInput
+          value={answers[factor.id] ?? ""}
+          onChange={(value) => updateAnswer(factor.id, value)}
+          disabled={disabled}
+        />
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -2656,7 +2718,7 @@ export default function Page() {
               const publicAnswers = person.answers || {};
               const activitiesMap = publicAnswers.activities && typeof publicAnswers.activities === "object" ? publicAnswers.activities : {};
               const publicActivityCount = Object.values(activitiesMap).filter(Boolean).length;
-              const mileSeconds = Number(publicAnswers.mile_time) || 0;
+              const mileSeconds = parseMile(publicAnswers.mile_time) || 0;
               const mileLabel = mileSeconds ? `${Math.floor(mileSeconds / 60)}:${String(Math.round(mileSeconds % 60)).padStart(2, "0")}` : "—";
               return (
                 <div style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(0,0,0,.82)", padding: 16, overflowY: "auto" }} onClick={() => setSelectedLeaderboardEmail(null)}>
