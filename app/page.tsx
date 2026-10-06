@@ -750,34 +750,32 @@ const pageWrap: React.CSSProperties = {
   padding: "24px 18px 70px",
   position: "relative",
   zIndex: 2,
-  fontFamily: "Arial, Helvetica, sans-serif",
+  fontFamily: "Impact, Haettenschweiler, 'Arial Narrow Bold', Arial, sans-serif",
 };
 
 const card: React.CSSProperties = {
-  background:
-    "linear-gradient(145deg, rgba(5,8,13,.96), rgba(18,24,34,.93))",
-  border: "1px solid rgba(148,163,184,.20)",
-  borderTop: "1px solid rgba(248,250,252,.24)",
-  borderRadius: 14,
+  background: "linear-gradient(145deg, rgba(29,33,37,.97), rgba(7,9,11,.98) 58%, rgba(20,23,26,.97))",
+  border: "1px solid rgba(178,184,190,.34)",
+  borderTop: "2px solid rgba(224,228,232,.40)",
+  borderRadius: 8,
   padding: 20,
-  boxShadow:
-    "0 16px 45px rgba(0,0,0,.42), inset 0 1px 0 rgba(255,255,255,.025)",
+  boxShadow: "0 18px 50px rgba(0,0,0,.58), inset 0 1px 0 rgba(255,255,255,.07), inset 0 -1px 0 rgba(0,0,0,.8)",
 };
 
 const inputStyle: React.CSSProperties = {
   width: "100%",
   boxSizing: "border-box",
-  background: "#0b1220",
+  background: "linear-gradient(180deg,#15191d,#090b0d)",
   color: "#f8fafc",
-  border: "1px solid #475569",
-  borderRadius: 9,
+  border: "1px solid #555d64",
+  borderRadius: 5,
   padding: "10px 11px",
   fontSize: 14,
   outline: "none",
 };
 
 const buttonBase: React.CSSProperties = {
-  borderRadius: 10,
+  borderRadius: 5,
   padding: "10px 15px",
   fontSize: 14,
   fontWeight: 800,
@@ -787,21 +785,21 @@ const buttonBase: React.CSSProperties = {
 const primaryButton: React.CSSProperties = {
   ...buttonBase,
   border: "1px solid #ef4444",
-  background: "#dc2626",
+  background: "linear-gradient(180deg,#ef2b2b,#8f0d0d)",
   color: "white",
 };
 
 const lightButton: React.CSSProperties = {
   ...buttonBase,
-  border: "1px solid #e2e8f0",
-  background: "#f8fafc",
-  color: "#020617",
+  border: "1px solid #727b83",
+  background: "linear-gradient(180deg,#343a40,#15191d)",
+  color: "#f8fafc",
 };
 
 const darkButton: React.CSSProperties = {
   ...buttonBase,
-  border: "1px solid #475569",
-  background: "#111827",
+  border: "1px solid #4b535a",
+  background: "linear-gradient(180deg,#22272b,#0b0d0f)",
   color: "#f8fafc",
 };
 
@@ -2762,7 +2760,7 @@ export default function Page() {
     <main
       style={{
         minHeight: "100vh",
-        background: "#020617",
+        background: "#07090b",
         color: "#f8fafc",
         position: "relative",
       }}
@@ -2790,9 +2788,9 @@ export default function Page() {
               padding: "42px 20px 38px",
               position: "relative",
               overflow: "hidden",
-              background:
-                "radial-gradient(circle at 50% 35%, rgba(127,29,29,.48), transparent 34%), linear-gradient(145deg, rgba(3,5,8,.98), rgba(15,23,42,.95))",
-              border: "1px solid rgba(239,68,68,.30)",
+              background: "radial-gradient(circle at 50% 35%, rgba(120,20,20,.32), transparent 35%), linear-gradient(145deg, rgba(35,39,43,.98), rgba(5,7,9,.99) 62%, rgba(18,20,23,.98))",
+              border: "1px solid rgba(190,196,202,.40)",
+              borderTop: "2px solid rgba(235,238,240,.45)",
               boxShadow:
                 "0 22px 60px rgba(0,0,0,.48), inset 0 0 80px rgba(127,29,29,.08)",
             }}
@@ -2829,11 +2827,11 @@ export default function Page() {
                 borderRadius: "50%",
                 display: "grid",
                 placeItems: "center",
-                border: "8px double rgba(239,68,68,.72)",
-                boxShadow:
-                  "0 0 0 7px rgba(255,255,255,.035), 0 0 45px rgba(220,38,38,.18)",
-                background:
-                  "radial-gradient(circle, rgba(69,10,10,.55), rgba(2,6,23,.82))",
+                border: "7px double rgba(196,201,206,.70)",
+                boxShadow: "0 0 0 7px rgba(255,255,255,.025), 0 0 48px rgba(220,38,38,.16), inset 0 0 28px rgba(255,255,255,.035)",
+                background: "radial-gradient(circle, rgba(42,47,52,.96), rgba(5,7,9,.98) 68%)",
+                color: "#e8ebed",
+                textShadow: "0 2px 0 #000, 0 0 18px rgba(255,255,255,.10)",
               }}
             >
               {score}
@@ -3354,7 +3352,7 @@ export default function Page() {
 
           <FactorSection
             title="Athletic Performance"
-            description="Performance metrics affect Alpha Status. Enter mile, 5K and HYROX times as mm.ss."
+            description="Performance metrics affect Alpha Status. Enter 100m, mile, 5K and HYROX times as HH.MM.SS."
             factors={athleticPerformance}
             answers={answers}
             updateAnswer={updateAnswer}
@@ -3691,7 +3689,7 @@ function Background() {
           backgroundImage: "url('/alpha-hero.png')",
           backgroundSize: "cover",
           backgroundPosition: "center",
-          opacity: 0.3,
+          opacity: 0.18,
           pointerEvents: "none",
           zIndex: 0,
         }}
@@ -3701,8 +3699,7 @@ function Background() {
         style={{
           position: "fixed",
           inset: 0,
-          background:
-            "linear-gradient(to bottom, rgba(2,6,23,.28), rgba(2,6,23,.96))",
+          background: "radial-gradient(circle at 50% 0%, rgba(72,78,84,.28), transparent 38%), linear-gradient(to bottom, rgba(5,7,9,.42), rgba(4,5,6,.98))",
           pointerEvents: "none",
           zIndex: 1,
         }}
@@ -3712,8 +3709,7 @@ function Background() {
         style={{
           position: "fixed",
           inset: 0,
-          backgroundImage:
-            "repeating-linear-gradient(135deg, rgba(255,255,255,.018) 0px, rgba(255,255,255,.018) 1px, transparent 1px, transparent 22px)",
+          backgroundImage: "repeating-linear-gradient(135deg, rgba(255,255,255,.025) 0px, rgba(255,255,255,.025) 1px, transparent 1px, transparent 18px), repeating-linear-gradient(0deg, rgba(255,255,255,.012) 0px, rgba(255,255,255,.012) 1px, transparent 1px, transparent 4px)",
           pointerEvents: "none",
           zIndex: 1,
         }}
@@ -3725,7 +3721,7 @@ function Background() {
           left: 0,
           top: 0,
           bottom: 0,
-          width: 5,
+          width: 3,
           background:
             "linear-gradient(to bottom, transparent, rgba(185,28,28,.72) 25%, rgba(185,28,28,.72) 75%, transparent)",
           pointerEvents: "none",
@@ -3739,7 +3735,7 @@ function Background() {
           right: 0,
           top: 0,
           bottom: 0,
-          width: 5,
+          width: 3,
           background:
             "linear-gradient(to bottom, transparent, rgba(185,28,28,.72) 25%, rgba(185,28,28,.72) 75%, transparent)",
           pointerEvents: "none",
@@ -3791,7 +3787,8 @@ function Header({
             letterSpacing: -1,
           }}
         >
-          ALPHA STATUS
+          <span style={{ color: "#d9dde0", textShadow: "0 2px 0 #000" }}>ALPHA</span>{" "}
+          <span style={{ color: "#dc2626", textShadow: "0 2px 0 #000, 0 0 16px rgba(220,38,38,.22)" }}>STATUS</span>
         </h1>
 
         <div
