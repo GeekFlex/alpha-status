@@ -1302,6 +1302,11 @@ export default function Page() {
   const [name, setName] = useState("");
   const [profilePhoto, setProfilePhoto] = useState<string>();
   const [profilePhotoPath, setProfilePhotoPath] = useState<string>();
+  const [profileCropFile, setProfileCropFile] = useState<File | null>(null);
+  const [profileCropSource, setProfileCropSource] = useState<string>();
+  const [profileCropZoom, setProfileCropZoom] = useState(1);
+  const [profileCropX, setProfileCropX] = useState(0);
+  const [profileCropY, setProfileCropY] = useState(0);
   const [assessmentPhoto, setAssessmentPhoto] = useState<string>();
   const [assessmentPhotoPath, setAssessmentPhotoPath] = useState<string>();
   const [measurementPhoto, setMeasurementPhoto] = useState<string>();
@@ -1725,12 +1730,55 @@ export default function Page() {
     });
   }
 
-  async function uploadProfilePhoto(file?: File) {
-    if (!file || !authUser) return;
+  function startProfileCrop(file?: File) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      setProfileCropFile(file);
+      setProfileCropSource(String(reader.result || ""));
+      setProfileCropZoom(1);
+      setProfileCropX(0);
+      setProfileCropY(0);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  async function applyProfileCrop() {
+    if (!profileCropFile || !profileCropSource || !authUser) return;
     try {
-      const path = await uploadToBucket("alpha-photos", authUser.id, "profile", file);
+      const image = new Image();
+      image.src = profileCropSource;
+      await new Promise<void>((resolve, reject) => {
+        image.onload = () => resolve();
+        image.onerror = () => reject(new Error("Could not read image."));
+      });
+
+      const size = 900;
+      const canvas = document.createElement("canvas");
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) throw new Error("Could not create crop.");
+
+      const coverScale = Math.max(size / image.naturalWidth, size / image.naturalHeight);
+      const scale = coverScale * profileCropZoom;
+      const drawWidth = image.naturalWidth * scale;
+      const drawHeight = image.naturalHeight * scale;
+      const overflowX = Math.max(0, (drawWidth - size) / 2);
+      const overflowY = Math.max(0, (drawHeight - size) / 2);
+      const drawX = (size - drawWidth) / 2 + (profileCropX / 100) * overflowX;
+      const drawY = (size - drawHeight) / 2 + (profileCropY / 100) * overflowY;
+      ctx.drawImage(image, drawX, drawY, drawWidth, drawHeight);
+
+      const blob = await new Promise<Blob>((resolve, reject) =>
+        canvas.toBlob((value) => value ? resolve(value) : reject(new Error("Could not create crop.")), "image/jpeg", 0.92)
+      );
+      const croppedFile = new File([blob], `profile-${Date.now()}.jpg`, { type: "image/jpeg" });
+      const path = await uploadToBucket("alpha-photos", authUser.id, "profile", croppedFile);
       setProfilePhotoPath(path);
       setProfilePhoto(publicPhotoUrl(path));
+      setProfileCropFile(null);
+      setProfileCropSource(undefined);
     } catch (error: any) { alert(`Photo upload failed: ${error.message || error}`); }
   }
 
@@ -2322,8 +2370,8 @@ export default function Page() {
                 <div style={sectionDescription}>{adminSelectedProfile.email}</div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14 }}>
                   {adminSelectedProfile.profile_photo_url && <div><div style={labelStyle}>Profile Photo</div><img src={publicPhotoUrl(adminSelectedProfile.profile_photo_url)} alt="Profile" style={{ width: "100%", maxHeight: 360, objectFit: "cover", borderRadius: 10 }} /></div>}
-                  {adminSelectedProfile.physique_photo_url && <div><div style={labelStyle}>Physique Assessment</div><img src={publicPhotoUrl(adminSelectedProfile.physique_photo_url)} alt="Physique assessment" style={{ width: "100%", maxHeight: 360, objectFit: "cover", borderRadius: 10 }} /></div>}
-                  <div><div style={labelStyle}>Measurement Submission</div>{adminMeasurementUrl ? <img src={adminMeasurementUrl} alt="Measurement submission" style={{ width: "100%", maxHeight: 360, objectFit: "cover", borderRadius: 10 }} /> : <div style={{ color: "#94a3b8", fontSize: 12 }}>Not submitted</div>}</div>
+                  {adminSelectedProfile.physique_photo_url && <div><div style={labelStyle}>Physique Assessment</div><img src={publicPhotoUrl(adminSelectedProfile.physique_photo_url)} alt="Physique assessment" style={{ display: "block", width: "100%", height: "auto", borderRadius: 10 }} /><div style={{ marginTop: 10 }}><div style={{ fontSize: 12, fontWeight: 900, marginBottom: 6 }}>Physique Assessment Rating: {adminScores.physique_photo_rating}/100</div><input type="range" min={0} max={100} step={1} value={adminScores.physique_photo_rating} onChange={(e) => setAdminScores((p) => ({ ...p, physique_photo_rating: Number(e.target.value) }))} style={{ width: "100%" }} /></div></div>}
+                  <div><div style={labelStyle}>Measurement Submission</div>{adminMeasurementUrl ? <><img src={adminMeasurementUrl} alt="Measurement submission" style={{ display: "block", width: "100%", height: "auto", borderRadius: 10 }} /><div style={{ marginTop: 10 }}><div style={{ fontSize: 12, fontWeight: 900, marginBottom: 6 }}>Measurement Submission Rating: {adminScores.measurement_photo_rating}/100</div><input type="range" min={0} max={100} step={1} value={adminScores.measurement_photo_rating} onChange={(e) => setAdminScores((p) => ({ ...p, measurement_photo_rating: Number(e.target.value) }))} style={{ width: "100%" }} /></div></> : <div style={{ color: "#94a3b8", fontSize: 12 }}>Not submitted</div>}</div>
                 </div>
               </section>
 
@@ -2332,8 +2380,7 @@ export default function Page() {
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(215px, 1fr))", gap: 15, marginTop: 18 }}>
                   {adminField("Alpha Look", "alpha_look")}
                   {adminField("Bonus Alpha Rating", "alpha_bonus")}
-                  {adminField("Measurement Photo Rating", "measurement_photo_rating")}
-                  {adminField("Physique Assessment Rating", "physique_photo_rating")}
+
                 </div>
               </section>
 
@@ -2341,7 +2388,7 @@ export default function Page() {
                 <h2 style={sectionTitle}>Bonus Alpha Photos</h2>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14, marginTop: 18 }}>
                   {bonusPaths.map((path: string, index: number) => <div key={path}>
-                    <img src={publicPhotoUrl(path)} alt={`Bonus ${index + 1}`} style={{ width: "100%", maxHeight: 330, objectFit: "cover", borderRadius: 10 }} />
+                    <img src={publicPhotoUrl(path)} alt={`Bonus ${index + 1}`} style={{ display: "block", width: "100%", height: "auto", borderRadius: 10 }} />
                     <div style={{ marginTop: 8 }}><NumberInput value={adminScores.bonus_photo_ratings[index] ?? 0} min={0} max={100} step={1} unit="/100" onChange={(value) => setAdminScores((p) => { const ratings = [...p.bonus_photo_ratings]; ratings[index] = Math.max(0, Math.min(100, Number(value) || 0)); return { ...p, bonus_photo_ratings: ratings }; })} /></div>
                   </div>)}
                 </div>
@@ -2782,7 +2829,7 @@ export default function Page() {
                   type="file"
                   accept="image/*"
                   onChange={(event) =>
-                    uploadProfilePhoto(event.target.files?.[0])
+                    startProfileCrop(event.target.files?.[0])
                   }
                 />
 
@@ -2828,10 +2875,10 @@ export default function Page() {
                   src={assessmentPhoto}
                   alt="Physique"
                   style={{
-                    width: "100%",
-                    maxWidth: 350,
-                    maxHeight: 450,
-                    objectFit: "cover",
+                    display: "block",
+                    maxWidth: "100%",
+                    width: "auto",
+                    height: "auto",
                     borderRadius: 14,
                   }}
                 />
@@ -2881,9 +2928,9 @@ export default function Page() {
                       src={photo}
                       alt={`Bonus ${index + 1}`}
                       style={{
+                        display: "block",
                         width: "100%",
-                        height: 170,
-                        objectFit: "cover",
+                        height: "auto",
                         borderRadius: 10,
                       }}
                     />
@@ -3413,6 +3460,27 @@ export default function Page() {
           </section>
         </div>
       </div>
+
+      {profileCropSource && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(0,0,0,.88)", display: "grid", placeItems: "center", padding: 18 }}>
+          <div style={{ ...card, width: "min(94vw, 520px)", margin: 0 }}>
+            <h2 style={sectionTitle}>Crop Profile Picture</h2>
+            <div style={sectionDescription}>Move and zoom the photo until the square shows exactly what you want.</div>
+            <div style={{ width: "min(78vw, 360px)", aspectRatio: "1 / 1", margin: "0 auto", overflow: "hidden", borderRadius: 14, border: "2px solid rgba(255,255,255,.35)", background: "#000", position: "relative" }}>
+              <img src={profileCropSource} alt="Crop preview" style={{ width: "100%", height: "100%", objectFit: "cover", transform: `translate(${profileCropX * 0.35}%, ${profileCropY * 0.35}%) scale(${profileCropZoom})`, transformOrigin: "center", userSelect: "none" }} />
+            </div>
+            <div style={{ display: "grid", gap: 12, marginTop: 18 }}>
+              <label><div style={labelStyle}>Zoom</div><input type="range" min={1} max={3} step={0.01} value={profileCropZoom} onChange={(e) => setProfileCropZoom(Number(e.target.value))} style={{ width: "100%" }} /></label>
+              <label><div style={labelStyle}>Move Left / Right</div><input type="range" min={-100} max={100} step={1} value={profileCropX} onChange={(e) => setProfileCropX(Number(e.target.value))} style={{ width: "100%" }} /></label>
+              <label><div style={labelStyle}>Move Up / Down</div><input type="range" min={-100} max={100} step={1} value={profileCropY} onChange={(e) => setProfileCropY(Number(e.target.value))} style={{ width: "100%" }} /></label>
+            </div>
+            <div style={{ display: "flex", gap: 10, marginTop: 18, flexWrap: "wrap" }}>
+              <button style={primaryButton} onClick={applyProfileCrop}>Use This Crop</button>
+              <button style={darkButton} onClick={() => { setProfileCropFile(null); setProfileCropSource(undefined); }}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
