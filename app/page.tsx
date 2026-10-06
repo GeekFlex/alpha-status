@@ -1287,6 +1287,7 @@ function FactorSection({
 export default function Page() {
   const [users, setUsers] = useState<Record<string, UserRecord>>({});
   const [authUser, setAuthUser] = useState<User | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [authLoaded, setAuthLoaded] = useState(false);
   const [currentEmail, setCurrentEmail] = useState<string | null>(null);
   const [email, setEmail] = useState("");
@@ -1308,19 +1309,32 @@ export default function Page() {
   const [answers, setAnswers] = useState<Record<string, any>>({});
 
   const currentUser = currentEmail ? users[currentEmail] : undefined;
-  const adminMode = !!currentUser?.isAdmin;
+  // Admin status comes from the secure Supabase public.is_admin() RPC.
+  // We intentionally do not trust profiles.is_admin in the browser.
+  const adminMode = isAdmin;
+
+  async function loadAdminStatus() {
+    const { data, error } = await supabase.rpc("is_admin");
+    if (error) {
+      console.error("Could not check admin status:", error);
+      setIsAdmin(false);
+      return false;
+    }
+    const allowed = data === true;
+    setIsAdmin(allowed);
+    return allowed;
+  }
 
   async function loadLeaderboard() {
     const { data, error } = await supabase
       .from("profiles")
-      .select("email, display_name, is_admin, answers, profile_photo_url, created_at");
+      .select("email, display_name, answers, profile_photo_url, created_at");
     if (error) { console.error(error); return; }
     const mapped: Record<string, UserRecord> = {};
     for (const row of data || []) {
       if (!row.email) continue;
       mapped[row.email] = {
         createdAt: row.created_at ? new Date(row.created_at).getTime() : Date.now(),
-        isAdmin: !!row.is_admin,
         answers: row.answers || {},
         profile: { name: row.display_name || "", profilePhoto: publicPhotoUrl(row.profile_photo_url) },
       };
@@ -1360,14 +1374,16 @@ export default function Page() {
       setAuthUser(user);
       setCurrentEmail(user?.email?.toLowerCase() || null);
       setAuthLoaded(true);
-      if (user) { loadCurrentProfile(user); loadLeaderboard(); }
+      if (user) { loadAdminStatus(); loadCurrentProfile(user); loadLeaderboard(); }
+      else setIsAdmin(false);
     });
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       const user = session?.user || null;
       setAuthUser(user);
       setCurrentEmail(user?.email?.toLowerCase() || null);
       setAuthLoaded(true);
-      if (user) { loadCurrentProfile(user); loadLeaderboard(); }
+      if (user) { loadAdminStatus(); loadCurrentProfile(user); loadLeaderboard(); }
+      else setIsAdmin(false);
     });
     return () => { active = false; listener.subscription.unsubscribe(); };
   }, []);
@@ -1549,6 +1565,7 @@ export default function Page() {
 
   async function logout() {
     await supabase.auth.signOut();
+    setIsAdmin(false);
     setAuthUser(null);
     setCurrentEmail(null);
     setEmail("");
