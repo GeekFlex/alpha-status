@@ -1857,6 +1857,20 @@ export default function Page() {
   }
 
   async function downloadShareCard() {
+    // Mobile Safari/Chrome can block downloads or the Web Share API after the
+    // async canvas work finishes because the original tap is no longer treated
+    // as an active user gesture. Open the preview immediately from the tap, then
+    // fill it with the finished card once generation completes.
+    const isMobile =
+      /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+      (navigator.maxTouchPoints > 1 && window.innerWidth <= 1024);
+
+    const mobilePreview = isMobile ? window.open("", "_blank") : null;
+    if (mobilePreview) {
+      mobilePreview.document.write(`<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>Alpha Status Card</title></head><body style="margin:0;background:#030507;color:white;font-family:Arial,sans-serif;display:flex;min-height:100vh;align-items:center;justify-content:center;text-align:center"><div id="status" style="padding:24px;font-weight:800">Generating Alpha Card…</div></body></html>`);
+      mobilePreview.document.close();
+    }
+
     const canvas = document.createElement("canvas");
     canvas.width = 1080;
     canvas.height = 1350;
@@ -1901,6 +1915,9 @@ export default function Page() {
 
     const drawPhoto = async (src: string) => {
       const img = new Image();
+      // Required for Supabase-hosted images drawn onto a canvas. Without CORS,
+      // some mobile browsers can silently block exporting the finished card.
+      img.crossOrigin = "anonymous";
       img.src = src;
       await new Promise<void>((resolve, reject) => {
         img.onload = () => resolve();
@@ -2096,28 +2113,75 @@ export default function Page() {
       .replace(/^-|-$/g, "");
     const fileName = `${safeName || "alpha-status"}-share-card.png`;
 
-    const blob = await new Promise<Blob>((resolve, reject) => {
-      canvas.toBlob((value) => value ? resolve(value) : reject(new Error("Could not create Alpha Card.")), "image/png");
-    });
-    const file = new File([blob], fileName, { type: "image/png" });
-
-    // On phones, use the native share sheet when file sharing is supported.
-    // This allows Save Image / Save to Files / Messages and other native targets.
+    let blob: Blob;
     try {
-      if (navigator.share && (!navigator.canShare || navigator.canShare({ files: [file] }))) {
-        await navigator.share({ files: [file], title: "Alpha Status Card" });
-        return;
+      blob = await new Promise<Blob>((resolve, reject) => {
+        canvas.toBlob(
+          (value) => value ? resolve(value) : reject(new Error("Could not create Alpha Card.")),
+          "image/png"
+        );
+      });
+    } catch (error) {
+      if (mobilePreview && !mobilePreview.closed) {
+        mobilePreview.document.body.innerHTML =
+          '<div style="padding:24px;color:white;font-family:Arial,sans-serif;text-align:center"><h2>Could not create the card</h2><p>Close this window and try again.</p></div>';
       }
-    } catch (error: any) {
-      if (error?.name === "AbortError") return;
-      console.warn("Native share unavailable, using download fallback.", error);
+      console.error("Alpha Card generation failed:", error);
+      alert("Could not create the Alpha Card. Please try again.");
+      return;
     }
 
+    const file = new File([blob], fileName, { type: "image/png" });
     const url = URL.createObjectURL(blob);
+
+    if (isMobile) {
+      // The preview window was opened synchronously by the original tap, so it
+      // isn't blocked by mobile popup/download restrictions. Users can long-press
+      // the finished image to Save to Photos, or use the Share button below it.
+      if (mobilePreview && !mobilePreview.closed) {
+        mobilePreview.document.body.innerHTML = `
+          <div style="width:100%;max-width:720px;margin:0 auto;padding:16px;box-sizing:border-box">
+            <img id="alpha-card-image" alt="Alpha Status Card" style="display:block;width:100%;height:auto;border-radius:14px" />
+            <button id="alpha-card-share" style="width:100%;margin-top:14px;padding:14px 18px;border:0;border-radius:10px;background:#dc2626;color:white;font-size:16px;font-weight:900">Share / Save Alpha Card</button>
+            <div style="color:#94a3b8;font-size:13px;line-height:1.5;margin-top:12px">You can also press and hold the image to save it.</div>
+          </div>`;
+        const imageEl = mobilePreview.document.getElementById("alpha-card-image") as HTMLImageElement | null;
+        if (imageEl) imageEl.src = url;
+
+        const shareButton = mobilePreview.document.getElementById("alpha-card-share");
+        if (shareButton) {
+          shareButton.onclick = async () => {
+            try {
+              if (navigator.share && (!navigator.canShare || navigator.canShare({ files: [file] }))) {
+                await navigator.share({ files: [file], title: "Alpha Status Card" });
+                return;
+              }
+            } catch (error: any) {
+              if (error?.name === "AbortError") return;
+            }
+
+            const link = mobilePreview.document.createElement("a");
+            link.href = url;
+            link.download = fileName;
+            link.click();
+          };
+        }
+
+        // Keep the object URL alive long enough for saving/sharing from the preview.
+        setTimeout(() => URL.revokeObjectURL(url), 5 * 60 * 1000);
+        return;
+      }
+
+      // If the browser blocked the preview despite the direct tap, show the image
+      // in the current tab rather than failing silently.
+      window.location.href = url;
+      return;
+    }
+
+    // Desktop: keep the normal direct PNG download behavior.
     const link = document.createElement("a");
     link.href = url;
     link.download = fileName;
-    link.target = "_blank";
     document.body.appendChild(link);
     link.click();
     link.remove();
