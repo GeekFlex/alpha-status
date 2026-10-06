@@ -1294,6 +1294,7 @@ export default function Page() {
   const [password, setPassword] = useState("");
   const [loginMode, setLoginMode] = useState(true);
   const [view, setView] = useState<"profile" | "leaderboard" | "admin">("profile");
+  const [selectedLeaderboardEmail, setSelectedLeaderboardEmail] = useState<string | null>(null);
   const [adminUsers, setAdminUsers] = useState<any[]>([]);
   const [adminSelectedId, setAdminSelectedId] = useState("");
   const [adminSelectedProfile, setAdminSelectedProfile] = useState<any>(null);
@@ -2089,18 +2090,38 @@ export default function Page() {
       1315
     );
 
-    const url = canvas.toDataURL("image/png");
-    const link = document.createElement("a");
     const safeName = (name || "alpha-status")
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-|-$/g, "");
+    const fileName = `${safeName || "alpha-status"}-share-card.png`;
 
+    const blob = await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob((value) => value ? resolve(value) : reject(new Error("Could not create Alpha Card.")), "image/png");
+    });
+    const file = new File([blob], fileName, { type: "image/png" });
+
+    // On phones, use the native share sheet when file sharing is supported.
+    // This allows Save Image / Save to Files / Messages and other native targets.
+    try {
+      if (navigator.share && (!navigator.canShare || navigator.canShare({ files: [file] }))) {
+        await navigator.share({ files: [file], title: "Alpha Status Card" });
+        return;
+      }
+    } catch (error: any) {
+      if (error?.name === "AbortError") return;
+      console.warn("Native share unavailable, using download fallback.", error);
+    }
+
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
     link.href = url;
-    link.download = `${safeName || "alpha-status"}-share-card.png`;
+    link.download = fileName;
+    link.target = "_blank";
     document.body.appendChild(link);
     link.click();
     link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
   }
 
   function exportCSV() {
@@ -2202,6 +2223,7 @@ export default function Page() {
           level: levelFor(userScore).name,
           clubTotal: userClubTotal,
           achievementCount: getAchievements(userAnswers).length,
+          answers: userAnswers,
         };
       })
       .sort((a, b) => b.score - a.score);
@@ -2462,6 +2484,10 @@ export default function Page() {
               {leaderboard.map((person, index) => (
                 <div
                   key={person.email}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => setSelectedLeaderboardEmail(person.email)}
+                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setSelectedLeaderboardEmail(person.email); }}
                   style={{
                     display: "flex",
                     alignItems: "center",
@@ -2473,6 +2499,7 @@ export default function Page() {
                       index === 0
                         ? "rgba(127,29,29,.35)"
                         : "rgba(15,23,42,.72)",
+                    cursor: "pointer",
                   }}
                 >
                   <div
@@ -2558,6 +2585,45 @@ export default function Page() {
                 </div>
               ))}
             </div>
+
+            {selectedLeaderboardEmail && (() => {
+              const person = leaderboard.find((entry) => entry.email === selectedLeaderboardEmail);
+              if (!person) return null;
+              const publicAnswers = person.answers || {};
+              const activitiesMap = publicAnswers.activities && typeof publicAnswers.activities === "object" ? publicAnswers.activities : {};
+              const publicActivityCount = Object.values(activitiesMap).filter(Boolean).length;
+              const mileSeconds = Number(publicAnswers.mile_time) || 0;
+              const mileLabel = mileSeconds ? `${Math.floor(mileSeconds / 60)}:${String(Math.round(mileSeconds % 60)).padStart(2, "0")}` : "—";
+              return (
+                <div style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(0,0,0,.82)", padding: 16, overflowY: "auto" }} onClick={() => setSelectedLeaderboardEmail(null)}>
+                  <div style={{ ...card, maxWidth: 620, margin: "40px auto", background: "linear-gradient(135deg, rgba(69,10,10,.98), rgba(8,12,18,.99) 55%, rgba(15,23,42,.98))", border: "1px solid rgba(239,68,68,.35)" }} onClick={(e) => e.stopPropagation()}>
+                    <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", marginBottom: 20 }}>
+                      <div style={{ color: "#ef4444", fontSize: 11, fontWeight: 900, letterSpacing: 3 }}>ALPHA PROFILE</div>
+                      <button style={darkButton} onClick={() => setSelectedLeaderboardEmail(null)}>Close</button>
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "110px 1fr", gap: 18, alignItems: "center" }}>
+                      <div style={{ width: 110, height: 110, borderRadius: 16, overflow: "hidden", background: "#020617", border: "1px solid rgba(255,255,255,.18)" }}>
+                        {person.photo ? <img src={person.photo} alt={person.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ height: "100%", display: "grid", placeItems: "center", color: "#64748b", fontSize: 10 }}>NO PHOTO</div>}
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 30, fontWeight: 950 }}>{person.name.toUpperCase()}</div>
+                        <div style={{ fontSize: 16, fontWeight: 900, marginTop: 4 }}>{person.level} • {person.score}/1000</div>
+                        <div style={{ color: "#cbd5e1", fontSize: 12, marginTop: 8 }}>{person.clubTotal} LB Total • {publicActivityCount} Activities • {person.achievementCount} Achievements</div>
+                      </div>
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(125px, 1fr))", gap: 10, marginTop: 22 }}>
+                      {[
+                        ["BENCH", publicAnswers.max_bench ? `${publicAnswers.max_bench} LB` : "—"],
+                        ["SQUAT", publicAnswers.max_squat ? `${publicAnswers.max_squat} LB` : "—"],
+                        ["DEADLIFT", publicAnswers.max_deadlift ? `${publicAnswers.max_deadlift} LB` : "—"],
+                        ["MILE", mileLabel],
+                        ["YEARS LIFTING", publicAnswers.years_lifting ?? "—"],
+                      ].map(([label, value]) => <div key={String(label)} style={{ padding: 12, borderRadius: 10, background: "rgba(2,6,23,.65)", border: "1px solid rgba(255,255,255,.09)" }}><div style={{ color: "#94a3b8", fontSize: 9, fontWeight: 900, letterSpacing: 1 }}>{label}</div><div style={{ fontSize: 18, fontWeight: 950, marginTop: 4 }}>{value}</div></div>)}
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
           </section>
         </div>
       </main>
