@@ -2180,6 +2180,7 @@ export default function Page() {
             setView={setView}
             exportCSV={exportCSV}
             logout={logout}
+            isAdmin={isAdmin}
           />
 
           <section style={card}>
@@ -2339,6 +2340,7 @@ export default function Page() {
           setView={setView}
           exportCSV={exportCSV}
           logout={logout}
+          isAdmin={isAdmin}
         />
 
         <div style={{ display: "grid", gap: 18 }}>
@@ -2410,6 +2412,12 @@ export default function Page() {
 
             <div style={{ color: "#cbd5e1", fontSize: 13, marginTop: 4 }}>
               {level.description}
+            </div>
+
+            <div style={{ marginTop: 22 }}>
+              <button style={primaryButton} onClick={saveProfile}>
+                Save Profile
+              </button>
             </div>
           </section>
 
@@ -3294,12 +3302,14 @@ function Header({
   setView,
   exportCSV,
   logout,
+  isAdmin,
 }: {
   email: string;
   view: "profile" | "leaderboard";
   setView: (value: "profile" | "leaderboard") => void;
   exportCSV: () => void;
   logout: () => void;
+  isAdmin: boolean;
 }) {
   return (
     <header
@@ -3333,6 +3343,25 @@ function Header({
         >
           Signed in as {email}
         </div>
+
+        {isAdmin && (
+          <div
+            style={{
+              display: "inline-block",
+              marginTop: 8,
+              padding: "4px 9px",
+              borderRadius: 999,
+              background: "#7f1d1d",
+              border: "1px solid #ef4444",
+              color: "#fee2e2",
+              fontSize: 10,
+              fontWeight: 950,
+              letterSpacing: 1.2,
+            }}
+          >
+            ADMIN
+          </div>
+        )}
       </div>
 
       <div
