@@ -1293,7 +1293,12 @@ export default function Page() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loginMode, setLoginMode] = useState(true);
-  const [view, setView] = useState<"profile" | "leaderboard">("profile");
+  const [view, setView] = useState<"profile" | "leaderboard" | "admin">("profile");
+  const [adminUsers, setAdminUsers] = useState<any[]>([]);
+  const [adminSelectedId, setAdminSelectedId] = useState("");
+  const [adminSelectedProfile, setAdminSelectedProfile] = useState<any>(null);
+  const [adminScores, setAdminScores] = useState({ alpha_look: 0, alpha_bonus: 0, measurement_photo_rating: 0, physique_photo_rating: 0, bonus_photo_ratings: [] as number[] });
+  const [adminMeasurementUrl, setAdminMeasurementUrl] = useState<string>();
   const [name, setName] = useState("");
   const [profilePhoto, setProfilePhoto] = useState<string>();
   const [profilePhotoPath, setProfilePhotoPath] = useState<string>();
@@ -1529,6 +1534,55 @@ export default function Page() {
       : {};
 
   const activityCount = Object.values(activityAnswers).filter(Boolean).length;
+
+  async function loadAdminReviewUsers() {
+    if (!isAdmin) return;
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("id, email, display_name, answers, profile_photo_url, physique_photo_url, measurement_photo_url, bonus_photo_urls, created_at")
+      .order("created_at", { ascending: true });
+    if (error) { alert(`Could not load members: ${error.message}`); return; }
+    setAdminUsers(data || []);
+  }
+
+  async function openAdminReview(userId: string) {
+    setAdminSelectedId(userId);
+    setAdminMeasurementUrl(undefined);
+    const profile = adminUsers.find((item) => item.id === userId) || null;
+    setAdminSelectedProfile(profile);
+    if (!userId || !profile) return;
+
+    const { data: scoreRow, error: scoreError } = await supabase
+      .from("admin_scores")
+      .select("alpha_look, alpha_bonus, measurement_photo_rating, physique_photo_rating, bonus_photo_ratings")
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (scoreError) { alert(`Could not load admin ratings: ${scoreError.message}`); return; }
+    setAdminScores({
+      alpha_look: Number(scoreRow?.alpha_look) || 0,
+      alpha_bonus: Number(scoreRow?.alpha_bonus) || 0,
+      measurement_photo_rating: Number(scoreRow?.measurement_photo_rating) || 0,
+      physique_photo_rating: Number(scoreRow?.physique_photo_rating) || 0,
+      bonus_photo_ratings: Array.isArray(scoreRow?.bonus_photo_ratings) ? scoreRow.bonus_photo_ratings.map(Number) : [],
+    });
+
+    if (profile.measurement_photo_url) {
+      const signed = await supabase.storage.from("measurement-photos").createSignedUrl(profile.measurement_photo_url, 3600);
+      if (!signed.error) setAdminMeasurementUrl(signed.data.signedUrl);
+    }
+  }
+
+  async function saveAdminScores() {
+    if (!isAdmin || !adminSelectedId) return;
+    const { error } = await supabase.from("admin_scores").upsert({
+      user_id: adminSelectedId,
+      ...adminScores,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: "user_id" });
+    if (error) { alert(`Could not save admin ratings: ${error.message}`); return; }
+    alert("Admin ratings saved.");
+    if (authUser?.id === adminSelectedId) await loadCurrentProfile(authUser);
+  }
 
   async function authenticate() {
     const cleanEmail = email.trim().toLowerCase();
@@ -2159,6 +2213,74 @@ export default function Page() {
     );
   }
 
+  /* ADMIN REVIEW */
+
+  if (view === "admin" && isAdmin) {
+    const bonusPaths = Array.isArray(adminSelectedProfile?.bonus_photo_urls) ? adminSelectedProfile.bonus_photo_urls : [];
+    const adminField = (label: string, key: "alpha_look" | "alpha_bonus" | "measurement_photo_rating" | "physique_photo_rating") => (
+      <label>
+        <div style={labelStyle}>{label}</div>
+        <NumberInput value={adminScores[key]} min={0} max={100} step={1} unit="/100" onChange={(value) => setAdminScores((p) => ({ ...p, [key]: Math.max(0, Math.min(100, Number(value) || 0)) }))} />
+      </label>
+    );
+
+    return (
+      <main style={{ minHeight: "100vh", background: "#020617", color: "#f8fafc", position: "relative" }}>
+        <Background />
+        <div style={pageWrap}>
+          <Header email={currentEmail!} view={view} setView={setView} exportCSV={exportCSV} logout={logout} isAdmin={isAdmin} onAdminOpen={() => { setView("admin"); loadAdminReviewUsers(); }} />
+          <section style={card}>
+            <h2 style={sectionTitle}>Admin Review</h2>
+            <div style={sectionDescription}>Select a member, review their submitted photos, assign the protected admin ratings, and save.</div>
+            <label>
+              <div style={labelStyle}>Member</div>
+              <select style={inputStyle} value={adminSelectedId} onChange={(e) => openAdminReview(e.target.value)}>
+                <option value="">Select a member...</option>
+                {adminUsers.map((member) => <option key={member.id} value={member.id}>{member.display_name || member.email || member.id}</option>)}
+              </select>
+            </label>
+          </section>
+
+          {adminSelectedProfile && (
+            <div style={{ display: "grid", gap: 18, marginTop: 18 }}>
+              <section style={card}>
+                <h2 style={sectionTitle}>{adminSelectedProfile.display_name || "Member"}</h2>
+                <div style={sectionDescription}>{adminSelectedProfile.email}</div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14 }}>
+                  {adminSelectedProfile.profile_photo_url && <div><div style={labelStyle}>Profile Photo</div><img src={publicPhotoUrl(adminSelectedProfile.profile_photo_url)} alt="Profile" style={{ width: "100%", maxHeight: 360, objectFit: "cover", borderRadius: 10 }} /></div>}
+                  {adminSelectedProfile.physique_photo_url && <div><div style={labelStyle}>Physique Assessment</div><img src={publicPhotoUrl(adminSelectedProfile.physique_photo_url)} alt="Physique assessment" style={{ width: "100%", maxHeight: 360, objectFit: "cover", borderRadius: 10 }} /></div>}
+                  <div><div style={labelStyle}>Measurement Submission</div>{adminMeasurementUrl ? <img src={adminMeasurementUrl} alt="Measurement submission" style={{ width: "100%", maxHeight: 360, objectFit: "cover", borderRadius: 10 }} /> : <div style={{ color: "#94a3b8", fontSize: 12 }}>Not submitted</div>}</div>
+                </div>
+              </section>
+
+              <section style={card}>
+                <h2 style={sectionTitle}>Admin Ratings</h2>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(215px, 1fr))", gap: 15, marginTop: 18 }}>
+                  {adminField("Alpha Look", "alpha_look")}
+                  {adminField("Bonus Alpha Rating", "alpha_bonus")}
+                  {adminField("Measurement Photo Rating", "measurement_photo_rating")}
+                  {adminField("Physique Assessment Rating", "physique_photo_rating")}
+                </div>
+              </section>
+
+              {bonusPaths.length > 0 && <section style={card}>
+                <h2 style={sectionTitle}>Bonus Alpha Photos</h2>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14, marginTop: 18 }}>
+                  {bonusPaths.map((path: string, index: number) => <div key={path}>
+                    <img src={publicPhotoUrl(path)} alt={`Bonus ${index + 1}`} style={{ width: "100%", maxHeight: 330, objectFit: "cover", borderRadius: 10 }} />
+                    <div style={{ marginTop: 8 }}><NumberInput value={adminScores.bonus_photo_ratings[index] ?? 0} min={0} max={100} step={1} unit="/100" onChange={(value) => setAdminScores((p) => { const ratings = [...p.bonus_photo_ratings]; ratings[index] = Math.max(0, Math.min(100, Number(value) || 0)); return { ...p, bonus_photo_ratings: ratings }; })} /></div>
+                  </div>)}
+                </div>
+              </section>}
+
+              <button style={primaryButton} onClick={saveAdminScores}>Save Admin Ratings</button>
+            </div>
+          )}
+        </div>
+      </main>
+    );
+  }
+
   /* LEADERBOARD */
 
   if (view === "leaderboard") {
@@ -2181,6 +2303,7 @@ export default function Page() {
             exportCSV={exportCSV}
             logout={logout}
             isAdmin={isAdmin}
+            onAdminOpen={() => { setView("admin"); loadAdminReviewUsers(); }}
           />
 
           <section style={card}>
@@ -2341,6 +2464,7 @@ export default function Page() {
           exportCSV={exportCSV}
           logout={logout}
           isAdmin={isAdmin}
+          onAdminOpen={() => { setView("admin"); loadAdminReviewUsers(); }}
         />
 
         <div style={{ display: "grid", gap: 18 }}>
@@ -3303,13 +3427,15 @@ function Header({
   exportCSV,
   logout,
   isAdmin,
+  onAdminOpen,
 }: {
   email: string;
-  view: "profile" | "leaderboard";
-  setView: (value: "profile" | "leaderboard") => void;
+  view: "profile" | "leaderboard" | "admin";
+  setView: (value: "profile" | "leaderboard" | "admin") => void;
   exportCSV: () => void;
   logout: () => void;
   isAdmin: boolean;
+  onAdminOpen: () => void;
 }) {
   return (
     <header
@@ -3384,6 +3510,12 @@ function Header({
         >
           Leaderboard
         </button>
+
+        {isAdmin && (
+          <button style={view === "admin" ? primaryButton : lightButton} onClick={onAdminOpen}>
+            Admin Review
+          </button>
+        )}
 
         <button style={lightButton} onClick={exportCSV}>
           Export CSV
