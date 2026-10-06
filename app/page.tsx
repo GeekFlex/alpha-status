@@ -745,22 +745,22 @@ const FACTORS: Factor[] = [
    ========================================================= */
 
 const pageWrap: React.CSSProperties = {
-  maxWidth: 1220,
+  maxWidth: 1120,
   margin: "0 auto",
   padding: "24px 18px 70px",
   position: "relative",
   zIndex: 2,
-  fontFamily: "Impact, Haettenschweiler, 'Arial Narrow Bold', Arial, sans-serif",
+  fontFamily: "'Arial Narrow', 'Roboto Condensed', Arial, sans-serif",
 };
 
 const card: React.CSSProperties = {
-  background: "linear-gradient(145deg, rgba(29,33,37,.97), rgba(7,9,11,.98) 58%, rgba(20,23,26,.97))",
-  border: "1px solid rgba(178,184,190,.34)",
-  borderTop: "2px solid rgba(224,228,232,.40)",
-  borderRadius: 3,
-  padding: 22,
-  clipPath: "polygon(12px 0, calc(100% - 12px) 0, 100% 12px, 100% calc(100% - 12px), calc(100% - 12px) 100%, 12px 100%, 0 calc(100% - 12px), 0 12px)",
-  boxShadow: "0 18px 50px rgba(0,0,0,.58), inset 0 1px 0 rgba(255,255,255,.07), inset 0 -1px 0 rgba(0,0,0,.8)",
+  background: "linear-gradient(150deg, rgba(24,28,32,.90), rgba(8,10,12,.94) 62%, rgba(18,21,24,.90))",
+  border: "1px solid rgba(168,176,184,.20)",
+  borderTop: "1px solid rgba(230,234,238,.28)",
+  borderRadius: 16,
+  padding: 20,
+  boxShadow: "0 18px 48px rgba(0,0,0,.44), inset 0 1px 0 rgba(255,255,255,.045)",
+  backdropFilter: "blur(8px)",
 };
 
 const inputStyle: React.CSSProperties = {
@@ -776,7 +776,7 @@ const inputStyle: React.CSSProperties = {
 };
 
 const buttonBase: React.CSSProperties = {
-  borderRadius: 5,
+  borderRadius: 10,
   padding: "10px 15px",
   fontSize: 14,
   fontWeight: 800,
@@ -786,21 +786,21 @@ const buttonBase: React.CSSProperties = {
 const primaryButton: React.CSSProperties = {
   ...buttonBase,
   border: "1px solid #ef4444",
-  background: "linear-gradient(180deg,#ef2b2b,#8f0d0d)",
+  background: "#dc2626",
   color: "white",
 };
 
 const lightButton: React.CSSProperties = {
   ...buttonBase,
-  border: "1px solid #727b83",
-  background: "linear-gradient(180deg,#343a40,#15191d)",
-  color: "#f8fafc",
+  border: "1px solid #e2e8f0",
+  background: "#f8fafc",
+  color: "#020617",
 };
 
 const darkButton: React.CSSProperties = {
   ...buttonBase,
-  border: "1px solid #4b535a",
-  background: "linear-gradient(180deg,#22272b,#0b0d0f)",
+  border: "1px solid #475569",
+  background: "#111827",
   color: "#f8fafc",
 };
 
@@ -830,8 +830,8 @@ const sectionTitle: React.CSSProperties = {
   fontWeight: 950,
   letterSpacing: ".7px",
   textTransform: "uppercase",
-  borderLeft: "4px solid #dc2626",
-  paddingLeft: 10,
+  color: "#f1f5f9",
+  textShadow: "0 2px 12px rgba(0,0,0,.45)",
 };
 
 const sectionDescription: React.CSSProperties = {
@@ -931,12 +931,6 @@ function TimeInput({
       <div style={helperStyle}>HH.MM.SS • Example: 00.08.58 = 8 min 58 sec</div>
     </div>
   );
-}
-
-function formatHeight(value: any) {
-  const inches = Number(value || 0);
-  if (!Number.isFinite(inches) || inches <= 0) return "—";
-  return `${Math.floor(inches / 12)}'${Math.round(inches % 12)}\"`;
 }
 
 function factorScore(factor: Factor, answers: Record<string, any>) {
@@ -2787,27 +2781,43 @@ export default function Page() {
 
         <div style={{ display: "grid", gap: 18 }}>
           {/* SCORE */}
-          <section style={{ ...card, padding: 0, overflow: "hidden", border: "1px solid #646b71", borderTop: "3px solid #aeb4b9", background: "linear-gradient(135deg,#1b1f22 0%,#080a0c 55%,#15181b 100%)", boxShadow: "0 24px 60px rgba(0,0,0,.58), inset 0 0 90px rgba(0,0,0,.35)" }}>
-            <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr)", gap: 0 }}>
-              <div style={{ padding: "28px clamp(18px,4vw,46px) 22px", position: "relative", textAlign: "center" }}>
-                <div style={{ color: "#e5e7eb", letterSpacing: 5, fontSize: 12, fontWeight: 950 }}>ALPHA SCORE</div>
-                <div style={{ fontSize: "clamp(92px,18vw,180px)", lineHeight: .82, fontWeight: 950, letterSpacing: -8, marginTop: 18, color: "#d9dde0", WebkitTextStroke: "2px #676e74", textShadow: "0 5px 0 #050607, 0 9px 16px rgba(0,0,0,.8), 0 0 22px rgba(255,255,255,.08)" }}>{score}</div>
-                <div style={{ maxWidth: 620, height: 14, margin: "24px auto 0", padding: 2, border: "1px solid #727980", background: "#050607", boxShadow: "inset 0 2px 6px #000" }}>
-                  <div style={{ width: `${Math.max(2, Math.min(100, score / 10))}%`, height: "100%", background: "linear-gradient(90deg,#6f0909,#ef2929)", boxShadow: "0 0 14px rgba(239,41,41,.45)" }} />
-                </div>
-                <div style={{ marginTop: 16, fontSize: 24, fontWeight: 950, letterSpacing: 2, textTransform: "uppercase" }}>{level.name}</div>
-                <div style={{ color: "#9ca3af", fontSize: 12, marginTop: 5, letterSpacing: .5 }}>{level.description}</div>
-              </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(4,minmax(0,1fr))", borderTop: "1px solid #454b50", borderBottom: "1px solid #202428", background: "rgba(0,0,0,.28)" }}>
-                {[
-                  ["AGE", answers.age || "—"],
-                  ["HEIGHT", formatHeight(answers.height)],
-                  ["WEIGHT", answers.weight ? `${answers.weight} lb` : "—"],
-                  ["BODY FAT", answers.body_fat ? `${answers.body_fat}%` : "—"],
-                ].map(([label,value],i) => <div key={String(label)} style={{ padding: "18px 8px", textAlign: "center", borderRight: i < 3 ? "1px solid #34393e" : "none" }}><div style={{ color: "#9ca3af", fontSize: 9, letterSpacing: 1.5, fontWeight: 900 }}>{label}</div><div style={{ fontSize: "clamp(17px,3vw,27px)", fontWeight: 950, marginTop: 5, color: "#f3f4f6" }}>{value}</div></div>)}
+          <section
+            style={{
+              textAlign: "center",
+              padding: "38px 18px 30px",
+              position: "relative",
+              overflow: "hidden",
+              background: "radial-gradient(circle at 50% 48%, rgba(185,28,28,.18), transparent 27%)",
+            }}
+          >
+            <div style={{ color: "#ef4444", letterSpacing: 4.5, fontSize: 10, fontWeight: 900 }}>
+              ALPHA SCORE
+            </div>
+
+            <div
+              style={{
+                position: "relative",
+                width: "min(72vw, 260px)",
+                aspectRatio: "1 / 1",
+                margin: "10px auto 0",
+                display: "grid",
+                placeItems: "center",
+              }}
+            >
+              <div style={{ position: "absolute", inset: 8, borderRadius: "50%", border: "2px solid rgba(214,220,226,.34)", boxShadow: "0 0 34px rgba(220,38,38,.14), inset 0 0 34px rgba(0,0,0,.52)" }} />
+              <div style={{ position: "absolute", inset: 20, borderRadius: "50%", border: "1px solid rgba(239,68,68,.34)" }} />
+              <div style={{ position: "absolute", left: "12%", right: "12%", bottom: "12%", height: 3, borderRadius: 99, background: "linear-gradient(90deg, transparent, #dc2626 20%, #ef4444 50%, #dc2626 80%, transparent)", boxShadow: "0 0 18px rgba(239,68,68,.65)" }} />
+              <div style={{ position: "relative", zIndex: 1 }}>
+                <div style={{ fontSize: "clamp(68px, 14vw, 104px)", lineHeight: .86, fontWeight: 950, letterSpacing: -5, color: "#f1f3f5", textShadow: "0 3px 0 #050505, 0 8px 26px rgba(0,0,0,.72)" }}>{score}</div>
+                <div style={{ color: "#8f969d", fontSize: 11, fontWeight: 800, letterSpacing: 2, marginTop: 10 }}>OUT OF 1000</div>
               </div>
-              <div style={{ padding: 18, textAlign: "center" }}><button style={{ ...primaryButton, minWidth: 210, textTransform: "uppercase", letterSpacing: 1.4 }} onClick={saveProfile}>Save Profile</button></div>
+            </div>
+
+            <div style={{ fontSize: 25, fontWeight: 950, marginTop: 2, letterSpacing: .5 }}>{level.name}</div>
+            <div style={{ color: "#aeb5bc", fontSize: 13, marginTop: 5 }}>{level.description}</div>
+            <div style={{ marginTop: 19 }}>
+              <button style={primaryButton} onClick={saveProfile}>Save Profile</button>
             </div>
           </section>
 
@@ -3644,7 +3654,7 @@ function Background() {
           backgroundImage: "url('/alpha-hero.png')",
           backgroundSize: "cover",
           backgroundPosition: "center",
-          opacity: 0.24,
+          opacity: 0.18,
           pointerEvents: "none",
           zIndex: 0,
         }}
@@ -3664,7 +3674,7 @@ function Background() {
         style={{
           position: "fixed",
           inset: 0,
-          backgroundImage: "repeating-linear-gradient(135deg, rgba(255,255,255,.025) 0px, rgba(255,255,255,.025) 1px, transparent 1px, transparent 18px), repeating-linear-gradient(0deg, rgba(255,255,255,.012) 0px, rgba(255,255,255,.012) 1px, transparent 1px, transparent 4px)",
+          backgroundImage: "radial-gradient(circle at 50% 10%, rgba(255,255,255,.035), transparent 30%)",
           pointerEvents: "none",
           zIndex: 1,
         }}
@@ -3722,46 +3732,94 @@ function Header({
   isAdmin: boolean;
   onAdminOpen: () => void;
 }) {
-  const navButton = (active: boolean): React.CSSProperties => ({
-    ...buttonBase,
-    minHeight: 44,
-    borderRadius: 0,
-    border: active ? "1px solid #ef4444" : "1px solid #3f464c",
-    background: active
-      ? "linear-gradient(180deg,#d92525,#760b0b)"
-      : "linear-gradient(180deg,#20252a,#090b0d)",
-    boxShadow: active ? "inset 0 1px 0 rgba(255,255,255,.18), 0 0 18px rgba(220,38,38,.20)" : "inset 0 1px 0 rgba(255,255,255,.05)",
-    textTransform: "uppercase",
-    letterSpacing: 1.1,
-    fontSize: 12,
-  });
-
   return (
-    <header style={{ marginBottom: 24 }}>
-      <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 18, flexWrap: "wrap", padding: "4px 4px 16px" }}>
-        <div>
-          <h1 style={{ margin: 0, fontSize: "clamp(38px,7vw,70px)", lineHeight: .88, fontWeight: 950, letterSpacing: -2.5, textTransform: "uppercase", filter: "drop-shadow(0 4px 0 #000)" }}>
-            <span style={{ color: "#d9dde0", WebkitTextStroke: "1px #747b81" }}>ALPHA</span>{" "}
-            <span style={{ color: "#c91f1f", WebkitTextStroke: "1px #5f0909" }}>STATUS</span>
-          </h1>
-          <div style={{ color: "#d7dadd", fontSize: 10, marginTop: 10, letterSpacing: 4, fontWeight: 900, textTransform: "uppercase" }}>
-            Strength • Performance • Ranking
+    <header
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        flexWrap: "wrap",
+        gap: 15,
+        marginBottom: 22,
+      }}
+    >
+      <div>
+        <h1
+          style={{
+            margin: 0,
+            fontSize: 31,
+            fontWeight: 950,
+            letterSpacing: -1,
+          }}
+        >
+          ALPHA STATUS
+        </h1>
+
+        <div
+          style={{
+            color: "#cbd5e1",
+            fontSize: 11,
+            marginTop: 4,
+          }}
+        >
+          Signed in as {email}
+        </div>
+
+        {isAdmin && (
+          <div
+            style={{
+              display: "inline-block",
+              marginTop: 8,
+              padding: "4px 9px",
+              borderRadius: 999,
+              background: "#7f1d1d",
+              border: "1px solid #ef4444",
+              color: "#fee2e2",
+              fontSize: 10,
+              fontWeight: 950,
+              letterSpacing: 1.2,
+            }}
+          >
+            ADMIN
           </div>
-        </div>
-        <div style={{ textAlign: "right", color: "#9ca3af", fontSize: 10, letterSpacing: .6 }}>
-          <div>Signed in as {email}</div>
-          {isAdmin && <div style={{ display: "inline-block", marginTop: 7, padding: "4px 10px", background: "#7f1d1d", border: "1px solid #ef4444", color: "#fff", fontWeight: 950, letterSpacing: 1.4 }}>ADMIN</div>}
-        </div>
+        )}
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(130px,1fr))", border: "1px solid #4c5359", background: "#080a0c", boxShadow: "0 12px 32px rgba(0,0,0,.45)" }}>
-        <button style={navButton(view === "profile")} onClick={() => setView("profile")}>Dashboard</button>
-        <button style={navButton(view === "leaderboard")} onClick={() => setView("leaderboard")}>Leaderboard</button>
-        {isAdmin && <button style={navButton(view === "admin")} onClick={onAdminOpen}>Admin Review</button>}
-        <button style={navButton(false)} onClick={exportCSV}>Export CSV</button>
-        <button style={navButton(false)} onClick={logout}>Sign Out</button>
+      <div
+        style={{
+          display: "flex",
+          gap: 8,
+          flexWrap: "wrap",
+        }}
+      >
+        <button
+          style={view === "profile" ? primaryButton : lightButton}
+          onClick={() => setView("profile")}
+        >
+          My Status
+        </button>
+
+        <button
+          style={view === "leaderboard" ? primaryButton : lightButton}
+          onClick={() => setView("leaderboard")}
+        >
+          Leaderboard
+        </button>
+
+        {isAdmin && (
+          <button style={view === "admin" ? primaryButton : lightButton} onClick={onAdminOpen}>
+            Admin Review
+          </button>
+        )}
+
+        <button style={lightButton} onClick={exportCSV}>
+          Export CSV
+        </button>
+
+        <button style={darkButton} onClick={logout}>
+          Sign Out
+        </button>
       </div>
     </header>
   );
 }
-
