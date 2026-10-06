@@ -2767,6 +2767,17 @@ export default function Page() {
       }}
     >
       <Background />
+      <style>{`
+        .alphaHero{position:relative;overflow:hidden;padding:34px 34px 28px;border-top:1px solid rgba(255,255,255,.16);border-bottom:1px solid rgba(255,255,255,.13);background:linear-gradient(115deg,rgba(5,7,9,.92),rgba(17,20,23,.72) 48%,rgba(5,7,9,.94));box-shadow:0 28px 80px rgba(0,0,0,.38)}
+        .alphaHero:before{content:"";position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(112deg,rgba(255,255,255,.018) 0 1px,transparent 1px 8px),radial-gradient(circle at 70% 38%,rgba(185,28,28,.16),transparent 28%)}
+        .alphaHero:after{content:"";position:absolute;left:0;right:0;top:0;height:2px;background:linear-gradient(90deg,transparent,#7f1d1d 20%,#ef4444 50%,#7f1d1d 80%,transparent);opacity:.7}
+        .alphaHeroBrand{position:relative;z-index:2;margin-bottom:26px}.alphaEyebrow{font-size:9px;letter-spacing:5px;font-weight:900;color:#9ca3af;margin-bottom:5px}.alphaWordmark{font-family:Impact,"Arial Narrow",sans-serif;font-size:clamp(44px,8vw,78px);line-height:.88;letter-spacing:-1px;color:#e8eaed;text-shadow:0 3px 0 #000,0 8px 22px rgba(0,0,0,.7)}.alphaWordmark span{color:#c9cdd1}.alphaRule{height:5px;margin-top:13px;background:linear-gradient(90deg,#b91c1c 0 28%,rgba(255,255,255,.18) 28% 72%,transparent 72%);transform:skewX(-24deg);max-width:650px}.alphaRule i{display:block;width:18%;height:100%;margin-left:31%;background:#ef4444;box-shadow:0 0 18px rgba(239,68,68,.65)}
+        .alphaHeroGrid{position:relative;z-index:2;display:grid;grid-template-columns:minmax(230px,.8fr) minmax(320px,1.25fr);gap:36px;align-items:stretch}.alphaPortraitShell{height:360px;position:relative;overflow:hidden;background:#050607;clip-path:polygon(0 0,94% 0,100% 7%,100% 100%,0 100%);border-left:2px solid #991b1b}.alphaPortrait{width:100%;height:100%;object-fit:cover;filter:contrast(1.08) saturate(.82)}.alphaNoPhoto{height:100%;display:grid;place-items:center;color:#525960;font-weight:900;letter-spacing:3px}.alphaPortraitFade{position:absolute;inset:0;background:linear-gradient(180deg,transparent 42%,rgba(3,4,5,.2) 62%,rgba(3,4,5,.96) 100%)}.alphaIdentityCopy{position:absolute;left:22px;right:18px;bottom:19px}.alphaName{font-family:Impact,"Arial Narrow",sans-serif;font-size:30px;letter-spacing:.8px}.alphaRank{font-size:11px;color:#ef4444;font-weight:950;letter-spacing:3px;margin-top:3px}
+        .alphaScoreStage{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:360px}.alphaScoreLabel{font-size:10px;font-weight:950;letter-spacing:5px;color:#a6adb4;margin-bottom:4px}.alphaScoreRing{width:250px;height:250px;position:relative;display:grid;place-items:center;border-radius:50%;background:conic-gradient(from 215deg,#ef4444 0deg,rgba(185,28,28,.85) calc(var(--scoreArc, 250deg)),rgba(100,108,116,.22) 0deg 290deg,transparent 290deg);filter:drop-shadow(0 12px 24px rgba(0,0,0,.55))}.alphaScoreRing:before{content:"";position:absolute;inset:7px;border-radius:50%;background:radial-gradient(circle,#171a1d 0,#080a0c 65%,#020304 100%);border:1px solid rgba(255,255,255,.22);box-shadow:inset 0 0 35px #000}.alphaScoreRing:after{content:"";position:absolute;inset:-7px;border-radius:50%;border:1px solid rgba(255,255,255,.12);border-bottom-color:transparent}.alphaScoreTicks{position:absolute;inset:15px;border-radius:50%;border:1px dashed rgba(255,255,255,.22);z-index:1}.alphaScoreInner{position:relative;z-index:2;text-align:center}.alphaScoreNumber{font-family:Impact,"Arial Narrow",sans-serif;font-size:92px;line-height:.8;letter-spacing:-2px;color:#f1f3f4;text-shadow:0 4px 0 #000,0 0 24px rgba(255,255,255,.08)}.alphaScoreOutOf{font-size:10px;letter-spacing:3px;color:#8e969d;font-weight:900;margin-top:13px}.alphaScoreTrack{width:min(100%,420px);height:5px;margin-top:17px;background:#24282c;transform:skewX(-22deg);overflow:hidden}.alphaScoreFill{height:100%;background:linear-gradient(90deg,#7f1d1d,#ef4444);box-shadow:0 0 14px #dc2626}.alphaScoreDescription{font-size:12px;color:#9ca3af;margin-top:11px;text-align:center;max-width:430px}
+        .alphaVitals{position:relative;z-index:2;display:grid;grid-template-columns:repeat(4,1fr);margin-top:26px;border-top:1px solid rgba(255,255,255,.15);border-bottom:1px solid rgba(255,255,255,.15);background:rgba(0,0,0,.2)}.alphaVital{padding:15px 18px;border-right:1px solid rgba(255,255,255,.12)}.alphaVital:last-child{border-right:0}.alphaVitalLabel{font-size:9px;color:#858d95;font-weight:950;letter-spacing:2.5px}.alphaVitalValue{font-family:Impact,"Arial Narrow",sans-serif;font-size:30px;line-height:1;margin-top:5px}.alphaVitalValue small{font-family:Arial,sans-serif;font-size:9px;color:#8b939a;margin-left:5px;letter-spacing:1px}
+        .alphaLiftDeck{position:relative;z-index:2;margin-top:22px}.alphaDeckTitle{font-size:10px;color:#8e969d;font-weight:950;letter-spacing:3px;margin-bottom:8px}.alphaDeckTitle span{color:#ef4444;margin-left:8px}.alphaLiftGrid{display:grid;grid-template-columns:repeat(5,1fr);border-top:1px solid rgba(255,255,255,.12)}.alphaLift{padding:13px 12px 9px;border-right:1px solid rgba(255,255,255,.1);background:linear-gradient(180deg,rgba(255,255,255,.035),transparent)}.alphaLift:last-child{border-right:0}.alphaLift div{font-size:9px;letter-spacing:2px;color:#858d95;font-weight:900}.alphaLift strong{font-family:Impact,"Arial Narrow",sans-serif;font-size:29px;margin-right:4px}.alphaLift small{font-size:8px;color:#777f87}.alphaLiftMeta strong{color:#d1d5db}.alphaHeroActions{position:relative;z-index:2;display:flex;gap:9px;flex-wrap:wrap;margin-top:22px}
+        @media(max-width:760px){.alphaHero{padding:26px 17px 22px}.alphaHeroGrid{grid-template-columns:1fr;gap:18px}.alphaPortraitShell{height:300px}.alphaScoreStage{min-height:auto;padding:8px 0}.alphaScoreRing{width:220px;height:220px}.alphaScoreNumber{font-size:80px}.alphaVitals{grid-template-columns:repeat(2,1fr)}.alphaVital:nth-child(2){border-right:0}.alphaVital:nth-child(-n+2){border-bottom:1px solid rgba(255,255,255,.12)}.alphaLiftGrid{grid-template-columns:repeat(3,1fr)}.alphaLift:nth-child(3){border-right:0}.alphaLift:nth-child(n+4){border-top:1px solid rgba(255,255,255,.1)}.alphaWordmark{font-size:50px}}
+      `}</style>
 
       <div style={pageWrap}>
         <Header
@@ -2780,160 +2791,80 @@ export default function Page() {
         />
 
         <div style={{ display: "grid", gap: 18 }}>
-          {/* SCORE */}
-
-          <section
-            style={{
-              textAlign: "center",
-              padding: "38px 18px 30px",
-              position: "relative",
-              overflow: "hidden",
-              background: "radial-gradient(circle at 50% 48%, rgba(185,28,28,.18), transparent 27%)",
-            }}
-          >
-            <div style={{ color: "#ef4444", letterSpacing: 4.5, fontSize: 10, fontWeight: 900 }}>
-              ALPHA SCORE
+          {/* MOCKUP-STYLE PERFORMANCE HERO */}
+          <section className="alphaHero">
+            <div className="alphaHeroBrand">
+              <div className="alphaEyebrow">THE MEASURE OF THE MAN</div>
+              <div className="alphaWordmark">ALPHA <span>STATUS</span></div>
+              <div className="alphaRule"><i /></div>
             </div>
 
-            <div
-              style={{
-                position: "relative",
-                width: "min(72vw, 260px)",
-                aspectRatio: "1 / 1",
-                margin: "10px auto 0",
-                display: "grid",
-                placeItems: "center",
-              }}
-            >
-              <div style={{ position: "absolute", inset: 8, borderRadius: "50%", border: "2px solid rgba(214,220,226,.34)", boxShadow: "0 0 34px rgba(220,38,38,.14), inset 0 0 34px rgba(0,0,0,.52)" }} />
-              <div style={{ position: "absolute", inset: 20, borderRadius: "50%", border: "1px solid rgba(239,68,68,.34)" }} />
-              <div style={{ position: "absolute", left: "12%", right: "12%", bottom: "12%", height: 3, borderRadius: 99, background: "linear-gradient(90deg, transparent, #dc2626 20%, #ef4444 50%, #dc2626 80%, transparent)", boxShadow: "0 0 18px rgba(239,68,68,.65)" }} />
-              <div style={{ position: "relative", zIndex: 1 }}>
-                <div style={{ fontSize: "clamp(68px, 14vw, 104px)", lineHeight: .86, fontWeight: 950, letterSpacing: -5, color: "#f1f3f5", textShadow: "0 3px 0 #050505, 0 8px 26px rgba(0,0,0,.72)" }}>{score}</div>
-                <div style={{ color: "#8f969d", fontSize: 11, fontWeight: 800, letterSpacing: 2, marginTop: 10 }}>OUT OF 1000</div>
-              </div>
-            </div>
-
-            <div style={{ fontSize: 25, fontWeight: 950, marginTop: 2, letterSpacing: .5 }}>{level.name}</div>
-            <div style={{ color: "#aeb5bc", fontSize: 13, marginTop: 5 }}>{level.description}</div>
-            <div style={{ marginTop: 19 }}>
-              <button style={primaryButton} onClick={saveProfile}>Save Profile</button>
-            </div>
-          </section>
-
-          {/* ALPHA PROFILE CARD */}
-
-          <section
-            style={{
-              ...card,
-              background:
-                "linear-gradient(135deg, rgba(69,10,10,.92), rgba(8,12,18,.96) 55%, rgba(15,23,42,.94))",
-            }}
-          >
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "auto 1fr",
-                gap: 18,
-                alignItems: "center",
-              }}
-            >
-              <div
-                style={{
-                  width: 110,
-                  height: 110,
-                  borderRadius: 16,
-                  overflow: "hidden",
-                  background: "#020617",
-                  border: "1px solid rgba(255,255,255,.18)",
-                }}
-              >
-                {profilePhoto ? (
-                  <img
-                    src={profilePhoto}
-                    alt={name || "Profile"}
-                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                  />
-                ) : (
-                  <div
-                    style={{
-                      height: "100%",
-                      display: "grid",
-                      placeItems: "center",
-                      color: "#64748b",
-                      fontSize: 11,
-                      fontWeight: 800,
-                    }}
-                  >
-                    NO PHOTO
+            <div className="alphaHeroGrid">
+              <div className="alphaIdentity">
+                <div className="alphaPortraitShell">
+                  {profilePhoto ? (
+                    <img src={profilePhoto} alt={name || "Profile"} className="alphaPortrait" />
+                  ) : (
+                    <div className="alphaNoPhoto">NO PHOTO</div>
+                  )}
+                  <div className="alphaPortraitFade" />
+                  <div className="alphaIdentityCopy">
+                    <div className="alphaName">{(name || "UNNAMED").toUpperCase()}</div>
+                    <div className="alphaRank">{level.name}</div>
                   </div>
-                )}
+                </div>
               </div>
 
-              <div>
-                <div style={{ color: "#ef4444", fontSize: 10, fontWeight: 900, letterSpacing: 3 }}>
-                  ALPHA PROFILE
+              <div className="alphaScoreStage">
+                <div className="alphaScoreLabel">ALPHA SCORE</div>
+                <div className="alphaScoreRing">
+                  <div className="alphaScoreTicks" />
+                  <div className="alphaScoreInner">
+                    <div className="alphaScoreNumber">{score}</div>
+                    <div className="alphaScoreOutOf">/ 1000</div>
+                  </div>
                 </div>
-                <div style={{ fontSize: 30, fontWeight: 950, marginTop: 4 }}>
-                  {(name || "UNNAMED").toUpperCase()}
+                <div className="alphaScoreTrack">
+                  <div className="alphaScoreFill" style={{ width: `${Math.max(0, Math.min(100, score / 10))}%` }} />
                 </div>
-                <div style={{ fontSize: 15, fontWeight: 900, marginTop: 3 }}>
-                  {level.name} • {score}/1000
-                </div>
-                <div style={{ color: "#cbd5e1", fontSize: 12, marginTop: 8, lineHeight: 1.6 }}>
-                  {clubNumber} LB Total • {activityCount} Activities • {achievements.length} Achievements
-                </div>
-                <div style={{ color: "#94a3b8", fontSize: 11, marginTop: 2 }}>
-                  Bench {answers.max_bench || 0} • Squat {answers.max_squat || 0} • Deadlift {answers.max_deadlift || 0}
-                </div>
+                <div className="alphaScoreDescription">{level.description}</div>
               </div>
             </div>
 
-            <div
-              style={{
-                display: "flex",
-                gap: 9,
-                flexWrap: "wrap",
-                marginTop: 18,
-              }}
-            >
-              <button style={primaryButton} onClick={downloadShareCard}>
-                Download Alpha Card
-              </button>
-              <div
-                style={{
-                  alignSelf: "center",
-                  color: "#94a3b8",
-                  fontSize: 11,
-                  fontWeight: 700,
-                }}
-              >
-                1080 × 1350 PNG
+            <div className="alphaVitals">
+              {[
+                ["AGE", answers.age || "—", "YRS"],
+                ["HEIGHT", formatHeightForCard(answers.height), ""],
+                ["WEIGHT", answers.weight || "—", "LB"],
+                ["BODY FAT", answers.body_fat || "—", "%"],
+              ].map(([label, value, unit]) => (
+                <div className="alphaVital" key={String(label)}>
+                  <div className="alphaVitalLabel">{label}</div>
+                  <div className="alphaVitalValue">{value}<small>{unit}</small></div>
+                </div>
+              ))}
+            </div>
+
+            <div className="alphaLiftDeck">
+              <div className="alphaDeckTitle">STRENGTH TOTAL <span>{clubNumber} LB</span></div>
+              <div className="alphaLiftGrid">
+                {[
+                  ["BENCH", answers.max_bench || 0],
+                  ["SQUAT", answers.max_squat || 0],
+                  ["DEADLIFT", answers.max_deadlift || 0],
+                ].map(([label, value]) => (
+                  <div className="alphaLift" key={String(label)}>
+                    <div>{label}</div><strong>{value}</strong><small>LB</small>
+                  </div>
+                ))}
+                <div className="alphaLift alphaLiftMeta"><div>ACTIVITIES</div><strong>{activityCount}</strong></div>
+                <div className="alphaLift alphaLiftMeta"><div>ACHIEVEMENTS</div><strong>{achievements.length}</strong></div>
               </div>
             </div>
 
-            <div style={{ marginTop: 18 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, fontWeight: 800 }}>
-                <span>PROFILE COMPLETION</span>
-                <span>{completion}%</span>
-              </div>
-              <div
-                style={{
-                  height: 8,
-                  background: "#111827",
-                  borderRadius: 999,
-                  overflow: "hidden",
-                  marginTop: 7,
-                }}
-              >
-                <div
-                  style={{
-                    width: `${completion}%`,
-                    height: "100%",
-                    background: "#dc2626",
-                  }}
-                />
-              </div>
+            <div className="alphaHeroActions">
+              <button style={primaryButton} onClick={saveProfile}>Save Profile</button>
+              <button style={darkButton} onClick={downloadShareCard}>Download Alpha Card</button>
             </div>
           </section>
 
