@@ -1351,8 +1351,38 @@ export default function Page() {
     const { data, error } = await supabase.from("profiles").select("*").eq("id", user.id).single();
     if (error) { console.error(error); alert(`Could not load profile: ${error.message}`); return; }
 
+    // Admin-only ratings live in the protected admin_scores table.
+    // Every authenticated user may read their OWN row, but only admins may write it.
+    const { data: secureAdminScores, error: adminScoreError } = await supabase
+      .from("admin_scores")
+      .select("alpha_look, alpha_bonus, measurement_photo_rating, physique_photo_rating, bonus_photo_ratings")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (adminScoreError) {
+      console.error("Could not load secure admin ratings:", adminScoreError);
+    }
+
+    const secureBonusRatings = Array.isArray(secureAdminScores?.bonus_photo_ratings)
+      ? secureAdminScores.bonus_photo_ratings.map(Number)
+      : [];
+    const secureBonusAverage = secureBonusRatings.length
+      ? secureBonusRatings.reduce((sum: number, value: number) => sum + value, 0) / secureBonusRatings.length
+      : 0;
+
+    // Merge protected admin ratings into the scoring answers in memory.
+    // They are deliberately stripped back out in saveProfile(), so members cannot write them.
+    const mergedAnswers = {
+      ...(data.answers || {}),
+      alpha_look: Number(secureAdminScores?.alpha_look) || 0,
+      alpha_bonus: Number(secureAdminScores?.alpha_bonus) || 0,
+      measurement_photo_rating: Number(secureAdminScores?.measurement_photo_rating) || 0,
+      physique_photo_rating: Number(secureAdminScores?.physique_photo_rating) || 0,
+      bonus_photos_rating: secureBonusAverage,
+    };
+
     setName(data.display_name || "");
-    setAnswers(data.answers || {});
+    setAnswers(mergedAnswers);
     setProfilePhotoPath(data.profile_photo_url || undefined);
     setProfilePhoto(publicPhotoUrl(data.profile_photo_url));
     setAssessmentPhotoPath(data.physique_photo_url || undefined);
@@ -1366,9 +1396,9 @@ export default function Page() {
     const paths = Array.isArray(data.bonus_photo_urls) ? data.bonus_photo_urls : [];
     setBonusPhotoPaths(paths);
     setBonusPhotos(paths.map((path: string) => publicPhotoUrl(path) || "").filter(Boolean));
-    setMeasurementPhotoRating(Number(data.measurement_photo_rating) || 0);
-    setAssessmentPhotoRating(Number(data.physique_photo_rating) || 0);
-    setBonusPhotoRatings(Array.isArray(data.bonus_photo_ratings) ? data.bonus_photo_ratings.map(Number) : []);
+    setMeasurementPhotoRating(Number(secureAdminScores?.measurement_photo_rating) || 0);
+    setAssessmentPhotoRating(Number(secureAdminScores?.physique_photo_rating) || 0);
+    setBonusPhotoRatings(secureBonusRatings);
   }
 
   useEffect(() => {
