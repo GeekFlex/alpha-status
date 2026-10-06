@@ -1983,12 +1983,8 @@ export default function Page() {
     ctx.font = "900 27px Arial";
     ctx.fillText("ALPHA STATUS", 70, 82);
 
-    ctx.fillStyle = "#f8fafc";
-    ctx.font = "950 70px Arial";
-    ctx.fillText("STRENGTH • CAPABILITY • PRESENCE", 70, 155);
-
     ctx.fillStyle = "#64748b";
-    ctx.fillRect(70, 190, 940, 2);
+    ctx.fillRect(70, 125, 940, 2);
 
     if (profilePhoto) {
       try {
@@ -2073,8 +2069,12 @@ export default function Page() {
 
     const mileText = answers.mile_time ? String(answers.mile_time) : "—";
     const yearsLiftingText = answers.years_lifting ? String(answers.years_lifting) : "—";
+    const heightInches = Number(answers.height || 0);
+    const heightText = heightInches > 0
+      ? `${Math.floor(heightInches / 12)}'${Math.round(heightInches % 12)}"`
+      : null;
     const bodyText = [
-      answers.height ? `${answers.height}"` : null,
+      heightText,
       answers.weight ? `${answers.weight} LB` : null,
       answers.body_fat ? `${answers.body_fat}% BF` : null,
     ].filter(Boolean).join(" • ") || "BODY STATS NOT ENTERED";
@@ -2098,13 +2098,13 @@ export default function Page() {
     );
 
     ctx.fillStyle = "#ef4444";
-    ctx.fillRect(70, 1275, 940, 3);
+    ctx.fillRect(70, 1245, 940, 3);
     ctx.fillStyle = "#94a3b8";
     ctx.font = "800 18px Arial";
     ctx.fillText(
       `${activityCount} ACTIVITIES  •  ${achievements.length} ACHIEVEMENTS`,
       70,
-      1315
+      1288
     );
 
     const safeName = (name || "alpha-status")
