@@ -1,15 +1,18 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import { createClient, type User } from "@supabase/supabase-js";
 
-const USERS_KEY = "alpha_status_test_v1";
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabasePublishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
+const supabase = createClient(supabaseUrl, supabasePublishableKey);
 
 /* =========================================================
    TYPES
    ========================================================= */
 
 type UserRecord = {
-  passwordHash: string;
+  passwordHash?: string;
   createdAt: number;
   isAdmin?: boolean;
   profile?: {
@@ -841,53 +844,24 @@ const sectionDescription: React.CSSProperties = {
 };
 
 /* =========================================================
-   STORAGE
+   SUPABASE HELPERS
    ========================================================= */
 
-function loadUsers(): Record<string, UserRecord> {
-  if (typeof window === "undefined") return {};
-
-  try {
-    return JSON.parse(localStorage.getItem(USERS_KEY) || "{}");
-  } catch {
-    return {};
-  }
+function publicPhotoUrl(path?: string | null) {
+  if (!path) return undefined;
+  if (path.startsWith("http://") || path.startsWith("https://")) return path;
+  return supabase.storage.from("alpha-photos").getPublicUrl(path).data.publicUrl;
 }
 
-function persistUsers(users: Record<string, UserRecord>) {
-  try {
-    localStorage.setItem(USERS_KEY, JSON.stringify(users));
-  } catch (error) {
-    console.error(error);
-
-    alert(
-      "Your browser could not save the data. Uploaded photos may be using too much browser storage."
-    );
-  }
+function safeFileName(name: string) {
+  return name.toLowerCase().replace(/[^a-z0-9._-]+/g, "-");
 }
 
-/* =========================================================
-   HELPERS
-   ========================================================= */
-
-async function sha256(text: string) {
-  const bytes = new TextEncoder().encode(text);
-  const buffer = await crypto.subtle.digest("SHA-256", bytes);
-
-  return Array.from(new Uint8Array(buffer))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-}
-
-function fileToDataURL(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-
-    reader.onload = () => resolve(String(reader.result));
-    reader.onerror = reject;
-
-    reader.readAsDataURL(file);
-  });
+async function uploadToBucket(bucket: string, userId: string, folder: string, file: File) {
+  const path = `${userId}/${folder}/${Date.now()}-${safeFileName(file.name)}`;
+  const { error } = await supabase.storage.from(bucket).upload(path, file, { upsert: false });
+  if (error) throw error;
+  return path;
 }
 
 /* =========================================================
@@ -1312,69 +1286,104 @@ function FactorSection({
 
 export default function Page() {
   const [users, setUsers] = useState<Record<string, UserRecord>>({});
-  const [storageLoaded, setStorageLoaded] = useState(false);
-
+  const [authUser, setAuthUser] = useState<User | null>(null);
+  const [authLoaded, setAuthLoaded] = useState(false);
   const [currentEmail, setCurrentEmail] = useState<string | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loginMode, setLoginMode] = useState(true);
-
   const [view, setView] = useState<"profile" | "leaderboard">("profile");
-
   const [name, setName] = useState("");
   const [profilePhoto, setProfilePhoto] = useState<string>();
+  const [profilePhotoPath, setProfilePhotoPath] = useState<string>();
   const [assessmentPhoto, setAssessmentPhoto] = useState<string>();
+  const [assessmentPhotoPath, setAssessmentPhotoPath] = useState<string>();
   const [measurementPhoto, setMeasurementPhoto] = useState<string>();
+  const [measurementPhotoPath, setMeasurementPhotoPath] = useState<string>();
   const [measurementPhotoRating, setMeasurementPhotoRating] = useState(0);
   const [assessmentPhotoRating, setAssessmentPhotoRating] = useState(0);
   const [bonusPhotoRatings, setBonusPhotoRatings] = useState<number[]>([]);
   const [bonusPhotos, setBonusPhotos] = useState<string[]>([]);
+  const [bonusPhotoPaths, setBonusPhotoPaths] = useState<string[]>([]);
   const [answers, setAnswers] = useState<Record<string, any>>({});
 
   const currentUser = currentEmail ? users[currentEmail] : undefined;
   const adminMode = !!currentUser?.isAdmin;
 
+  async function loadLeaderboard() {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("email, display_name, is_admin, answers, profile_photo_url, created_at");
+    if (error) { console.error(error); return; }
+    const mapped: Record<string, UserRecord> = {};
+    for (const row of data || []) {
+      if (!row.email) continue;
+      mapped[row.email] = {
+        createdAt: row.created_at ? new Date(row.created_at).getTime() : Date.now(),
+        isAdmin: !!row.is_admin,
+        answers: row.answers || {},
+        profile: { name: row.display_name || "", profilePhoto: publicPhotoUrl(row.profile_photo_url) },
+      };
+    }
+    setUsers(mapped);
+  }
+
+  async function loadCurrentProfile(user: User) {
+    const { data, error } = await supabase.from("profiles").select("*").eq("id", user.id).single();
+    if (error) { console.error(error); alert(`Could not load profile: ${error.message}`); return; }
+
+    setName(data.display_name || "");
+    setAnswers(data.answers || {});
+    setProfilePhotoPath(data.profile_photo_url || undefined);
+    setProfilePhoto(publicPhotoUrl(data.profile_photo_url));
+    setAssessmentPhotoPath(data.physique_photo_url || undefined);
+    setAssessmentPhoto(publicPhotoUrl(data.physique_photo_url));
+    setMeasurementPhotoPath(data.measurement_photo_url || undefined);
+    setMeasurementPhoto(undefined);
+    if (data.measurement_photo_url) {
+      const signed = await supabase.storage.from("measurement-photos").createSignedUrl(data.measurement_photo_url, 3600);
+      if (!signed.error) setMeasurementPhoto(signed.data.signedUrl);
+    }
+    const paths = Array.isArray(data.bonus_photo_urls) ? data.bonus_photo_urls : [];
+    setBonusPhotoPaths(paths);
+    setBonusPhotos(paths.map((path: string) => publicPhotoUrl(path) || "").filter(Boolean));
+    setMeasurementPhotoRating(Number(data.measurement_photo_rating) || 0);
+    setAssessmentPhotoRating(Number(data.physique_photo_rating) || 0);
+    setBonusPhotoRatings(Array.isArray(data.bonus_photo_ratings) ? data.bonus_photo_ratings.map(Number) : []);
+  }
+
   useEffect(() => {
-    setUsers(loadUsers());
-    setStorageLoaded(true);
+    let active = true;
+    supabase.auth.getSession().then(({ data }) => {
+      if (!active) return;
+      const user = data.session?.user || null;
+      setAuthUser(user);
+      setCurrentEmail(user?.email?.toLowerCase() || null);
+      setAuthLoaded(true);
+      if (user) { loadCurrentProfile(user); loadLeaderboard(); }
+    });
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      const user = session?.user || null;
+      setAuthUser(user);
+      setCurrentEmail(user?.email?.toLowerCase() || null);
+      setAuthLoaded(true);
+      if (user) { loadCurrentProfile(user); loadLeaderboard(); }
+    });
+    return () => { active = false; listener.subscription.unsubscribe(); };
   }, []);
-
-  useEffect(() => {
-    if (!storageLoaded) return;
-    persistUsers(users);
-  }, [users, storageLoaded]);
-
-  useEffect(() => {
-    if (!currentEmail) return;
-
-    const user = users[currentEmail];
-
-    if (!user) return;
-
-    setName(user.profile?.name || "");
-    setProfilePhoto(user.profile?.profilePhoto);
-    setAssessmentPhoto(user.profile?.assessmentPhoto);
-    setMeasurementPhoto(user.profile?.measurementPhoto);
-    setMeasurementPhotoRating(user.profile?.measurementPhotoRating || 0);
-    setAssessmentPhotoRating(user.profile?.assessmentPhotoRating || 0);
-    setBonusPhotoRatings(user.profile?.bonusPhotoRatings || []);
-    setBonusPhotos(user.profile?.extraAlphaPhotos || []);
-    setAnswers(user.answers || {});
-  }, [currentEmail]);
 
   useEffect(() => {
     const rated = bonusPhotoRatings.slice(0, bonusPhotos.length);
     const bonusAverage = rated.length
       ? rated.reduce((sum, value) => sum + (Number(value) || 0), 0) / rated.length
       : 0;
-
     setAnswers((previous) => ({
       ...previous,
-      measurement_photo_rating: measurementPhoto ? measurementPhotoRating : 0,
-      physique_photo_rating: assessmentPhoto ? assessmentPhotoRating : 0,
-      bonus_photos_rating: bonusPhotos.length ? bonusAverage : 0,
+      measurement_photo_rating: measurementPhotoPath ? measurementPhotoRating : 0,
+      physique_photo_rating: assessmentPhotoPath ? assessmentPhotoRating : 0,
+      bonus_photos_rating: bonusPhotoPaths.length ? bonusAverage : 0,
     }));
-  }, [measurementPhoto, measurementPhotoRating, assessmentPhoto, assessmentPhotoRating, bonusPhotos, bonusPhotoRatings]);
+  }, [measurementPhotoPath, measurementPhotoRating, assessmentPhotoPath, assessmentPhotoRating, bonusPhotoPaths, bonusPhotos.length, bonusPhotoRatings]);
 
   const clubNumber =
     (Number(answers.max_bench) || 0) +
@@ -1507,72 +1516,52 @@ export default function Page() {
 
   async function authenticate() {
     const cleanEmail = email.trim().toLowerCase();
-
-    if (!cleanEmail || !password) {
-      alert("Enter an email and password.");
-      return;
-    }
-
-    const hash = await sha256(password);
+    if (!cleanEmail || !password) { alert("Enter an email and password."); return; }
 
     if (loginMode) {
-      const user = users[cleanEmail];
-
-      if (!user) {
-        alert("No account found. Create one instead.");
-        return;
-      }
-
-      if (user.passwordHash !== hash) {
-        alert("Incorrect password.");
-        return;
-      }
-
-      setCurrentEmail(cleanEmail);
+      const { data, error } = await supabase.auth.signInWithPassword({ email: cleanEmail, password });
+      if (error) { alert(error.message); return; }
+      setAuthUser(data.user);
+      setCurrentEmail(data.user.email?.toLowerCase() || cleanEmail);
       setPassword("");
       setView("profile");
-
+      await loadCurrentProfile(data.user);
+      await loadLeaderboard();
       return;
     }
 
-    if (users[cleanEmail]) {
-      alert("That account already exists.");
-      return;
-    }
-
-    const firstAccount = Object.keys(users).length === 0;
-
-    const newUser: UserRecord = {
-      passwordHash: hash,
-      createdAt: Date.now(),
-      isAdmin: firstAccount,
-      profile: {},
-      answers: {},
-    };
-
-    setUsers((previous) => ({
-      ...previous,
-      [cleanEmail]: newUser,
-    }));
-
-    setCurrentEmail(cleanEmail);
-    setName("");
-    setProfilePhoto(undefined);
-    setAssessmentPhoto(undefined);
-    setBonusPhotos([]);
-    setAnswers({});
+    const { data, error } = await supabase.auth.signUp({ email: cleanEmail, password });
+    if (error) { alert(error.message); return; }
     setPassword("");
-    setView("profile");
+    if (!data.session) {
+      alert("Account created. Check your email for the confirmation link, then come back and sign in.");
+      setLoginMode(true);
+      return;
+    }
+    if (data.user) {
+      setAuthUser(data.user);
+      setCurrentEmail(data.user.email?.toLowerCase() || cleanEmail);
+      setView("profile");
+      await loadCurrentProfile(data.user);
+      await loadLeaderboard();
+    }
   }
 
-  function logout() {
+  async function logout() {
+    await supabase.auth.signOut();
+    setAuthUser(null);
     setCurrentEmail(null);
     setEmail("");
     setPassword("");
     setName("");
     setProfilePhoto(undefined);
+    setProfilePhotoPath(undefined);
     setAssessmentPhoto(undefined);
+    setAssessmentPhotoPath(undefined);
+    setMeasurementPhoto(undefined);
+    setMeasurementPhotoPath(undefined);
     setBonusPhotos([]);
+    setBonusPhotoPaths([]);
     setAnswers({});
     setView("profile");
   }
@@ -1592,71 +1581,75 @@ export default function Page() {
   }
 
   async function uploadProfilePhoto(file?: File) {
-    if (!file) return;
-    const url = await fileToDataURL(file);
-    setProfilePhoto(url);
+    if (!file || !authUser) return;
+    try {
+      const path = await uploadToBucket("alpha-photos", authUser.id, "profile", file);
+      setProfilePhotoPath(path);
+      setProfilePhoto(publicPhotoUrl(path));
+    } catch (error: any) { alert(`Photo upload failed: ${error.message || error}`); }
   }
 
   async function uploadAssessmentPhoto(file?: File) {
-    if (!file) return;
-    const url = await fileToDataURL(file);
-    setAssessmentPhoto(url);
+    if (!file || !authUser) return;
+    try {
+      const path = await uploadToBucket("alpha-photos", authUser.id, "physique", file);
+      setAssessmentPhotoPath(path);
+      setAssessmentPhoto(publicPhotoUrl(path));
+    } catch (error: any) { alert(`Photo upload failed: ${error.message || error}`); }
   }
 
   async function uploadMeasurementPhoto(file?: File) {
-    if (!file) return;
-    const url = await fileToDataURL(file);
-    setMeasurementPhoto(url);
+    if (!file || !authUser) return;
+    try {
+      const path = await uploadToBucket("measurement-photos", authUser.id, "submission", file);
+      setMeasurementPhotoPath(path);
+      const signed = await supabase.storage.from("measurement-photos").createSignedUrl(path, 3600);
+      setMeasurementPhoto(signed.error ? undefined : signed.data.signedUrl);
+    } catch (error: any) { alert(`Photo upload failed: ${error.message || error}`); }
   }
 
   async function uploadBonusPhotos(files: FileList | null) {
-    if (!files?.length) return;
-
-    const converted: string[] = [];
-
-    for (const file of Array.from(files)) {
-      converted.push(await fileToDataURL(file));
-    }
-
-    setBonusPhotos((previous) => [...previous, ...converted]);
-    setBonusPhotoRatings((previous) => [...previous, ...converted.map(() => 0)]);
+    if (!files?.length || !authUser) return;
+    try {
+      const newPaths: string[] = [];
+      for (const file of Array.from(files)) newPaths.push(await uploadToBucket("alpha-photos", authUser.id, "bonus", file));
+      setBonusPhotoPaths((previous) => [...previous, ...newPaths]);
+      setBonusPhotos((previous) => [...previous, ...newPaths.map((path) => publicPhotoUrl(path) || "")]);
+      setBonusPhotoRatings((previous) => [...previous, ...newPaths.map(() => 0)]);
+    } catch (error: any) { alert(`Photo upload failed: ${error.message || error}`); }
   }
 
-  function removeBonusPhoto(index: number) {
+  async function removeBonusPhoto(index: number) {
+    const path = bonusPhotoPaths[index];
+    if (path) await supabase.storage.from("alpha-photos").remove([path]);
+    setBonusPhotoPaths((previous) => previous.filter((_, i) => i !== index));
     setBonusPhotos((previous) => previous.filter((_, i) => i !== index));
     setBonusPhotoRatings((previous) => previous.filter((_, i) => i !== index));
   }
 
-  function saveProfile() {
-    if (!currentEmail) return;
+  async function saveProfile() {
+    if (!authUser) return;
+    const safeAnswers = { ...answers };
+    delete safeAnswers.measurement_photo_rating;
+    delete safeAnswers.physique_photo_rating;
+    delete safeAnswers.bonus_photos_rating;
+    delete safeAnswers.alpha_look;
+    delete safeAnswers.alpha_bonus;
 
-    setUsers((previous) => {
-      const existing = previous[currentEmail];
+    const { error } = await supabase.from("profiles").update({
+      display_name: name.trim(),
+      answers: safeAnswers,
+      profile_photo_url: profilePhotoPath || null,
+      physique_photo_url: assessmentPhotoPath || null,
+      measurement_photo_url: measurementPhotoPath || null,
+      bonus_photo_urls: bonusPhotoPaths,
+      updated_at: new Date().toISOString(),
+    }).eq("id", authUser.id);
 
-      return {
-        ...previous,
-
-        [currentEmail]: {
-          ...existing,
-
-          profile: {
-            name,
-            profilePhoto,
-            assessmentPhoto,
-            measurementPhoto,
-            measurementPhotoRating,
-            assessmentPhotoRating,
-            bonusPhotoRatings,
-            extraAlphaPhotos: bonusPhotos,
-          },
-
-          answers,
-          isAdmin: existing?.isAdmin,
-        },
-      };
-    });
-
-    alert("Profile saved.");
+    if (error) { alert(`Could not save profile: ${error.message}`); return; }
+    alert("Profile saved to the server.");
+    await loadCurrentProfile(authUser);
+    await loadLeaderboard();
   }
 
   function resetAnswers() {
@@ -2023,6 +2016,10 @@ export default function Page() {
 
   /* LOGIN */
 
+  if (!authLoaded) {
+    return <main style={{ minHeight: "100vh", background: "#020617", color: "#f8fafc", display: "grid", placeItems: "center" }}><div>Loading Alpha Status...</div></main>;
+  }
+
   if (!currentEmail) {
     return (
       <main
@@ -2190,7 +2187,7 @@ export default function Page() {
                     marginTop: 5,
                   }}
                 >
-                  Alpha Status rankings on this browser.
+                  Shared Alpha Status rankings.
                 </div>
               </div>
 
