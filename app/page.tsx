@@ -1331,19 +1331,63 @@ export default function Page() {
   }
 
   async function loadLeaderboard() {
-    const { data, error } = await supabase
+    // Load the public profile data used by the leaderboard.
+    const { data: profileRows, error: profileError } = await supabase
       .from("profiles")
-      .select("email, display_name, answers, profile_photo_url, created_at");
-    if (error) { console.error(error); return; }
+      .select("id, email, display_name, answers, profile_photo_url, created_at");
+
+    if (profileError) {
+      console.error("Could not load leaderboard profiles:", profileError);
+      return;
+    }
+
+    // Admin ratings are stored separately from profiles. Every authenticated
+    // member may read these numeric ratings for leaderboard scoring, while
+    // only admins may create/update them through RLS.
+    const { data: adminScoreRows, error: adminScoreError } = await supabase
+      .from("admin_scores")
+      .select("user_id, alpha_look, alpha_bonus, measurement_photo_rating, physique_photo_rating, bonus_photo_ratings");
+
+    if (adminScoreError) {
+      console.error("Could not load leaderboard admin ratings:", adminScoreError);
+    }
+
+    const adminScoresByUser = new Map(
+      (adminScoreRows || []).map((row) => [row.user_id, row])
+    );
+
     const mapped: Record<string, UserRecord> = {};
-    for (const row of data || []) {
+
+    for (const row of profileRows || []) {
       if (!row.email) continue;
+
+      const secureAdminScores = adminScoresByUser.get(row.id);
+      const secureBonusRatings = Array.isArray(secureAdminScores?.bonus_photo_ratings)
+        ? secureAdminScores.bonus_photo_ratings.map(Number)
+        : [];
+      const secureBonusAverage = secureBonusRatings.length
+        ? secureBonusRatings.reduce((sum: number, value: number) => sum + value, 0) / secureBonusRatings.length
+        : 0;
+
+      const mergedAnswers = {
+        ...(row.answers || {}),
+        alpha_look: Number(secureAdminScores?.alpha_look) || 0,
+        alpha_bonus: Number(secureAdminScores?.alpha_bonus) || 0,
+        measurement_photo_rating: Number(secureAdminScores?.measurement_photo_rating) || 0,
+        physique_photo_rating: Number(secureAdminScores?.physique_photo_rating) || 0,
+        bonus_photos_rating: secureBonusAverage,
+      };
+
       mapped[row.email] = {
         createdAt: row.created_at ? new Date(row.created_at).getTime() : Date.now(),
-        answers: row.answers || {},
-        profile: { name: row.display_name || "", profilePhoto: publicPhotoUrl(row.profile_photo_url) },
+        answers: mergedAnswers,
+        profile: {
+          name: row.display_name || "",
+          profilePhoto: publicPhotoUrl(row.profile_photo_url),
+        },
       };
     }
+
     setUsers(mapped);
   }
 
