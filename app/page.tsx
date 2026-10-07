@@ -534,6 +534,24 @@ const FACTORS: Factor[] = [
 
   {
     kind: "number",
+    id: "cars",
+    label: "Cars",
+    unit: "#",
+    weight: 0.01,
+    domain: { min: 0, max: 10, better: "higher" },
+  },
+
+  {
+    kind: "number",
+    id: "guns",
+    label: "Guns",
+    unit: "#",
+    weight: 0.01,
+    domain: { min: 0, max: 10, better: "higher" },
+  },
+
+  {
+    kind: "number",
     id: "boats",
     label: "Boats",
     unit: "#",
@@ -964,7 +982,7 @@ function factorScore(factor: Factor, answers: Record<string, any>) {
     return 0;
   }
 
-  const timeFields = ["sprint_100m", "mile_time", "five_k_time", "hyrox_time"];
+  const timeFields = ["dead_hang", "sprint_100m", "mile_time", "five_k_time", "hyrox_time"];
 
   let numeric =
     timeFields.includes(factor.id) ? parseMile(value) : Number(value);
@@ -1240,11 +1258,10 @@ function FactorField({
     factor.id === "years_lifting" ||
     factor.id === "max_pullups" ||
     factor.id === "max_pushups" ||
-    factor.id === "dead_hang" ||
     factor.id === "children_count" ||
     factor.id === "hit_number" ||
     factor.id === "income" ||
-    ["homes", "boats", "atvs", "jetskis", "motorcycles", "rvs", "campers", "planes", "dirt_bikes"].includes(factor.id) ||
+    ["homes", "cars", "guns", "boats", "atvs", "jetskis", "motorcycles", "rvs", "campers", "planes", "dirt_bikes"].includes(factor.id) ||
     factor.id === "alpha_look" ||
     factor.id === "alpha_bonus" ||
     factor.id.startsWith("knowledge_")
@@ -1255,7 +1272,7 @@ function FactorField({
   if (["mile_time", "five_k_time", "hyrox_time"].includes(factor.id)) step = 0.01;
 
   const disabled = !!factor.adminOnly && !adminMode;
-  const isTimedEvent = ["sprint_100m", "mile_time", "five_k_time", "hyrox_time"].includes(factor.id);
+  const isTimedEvent = ["dead_hang", "sprint_100m", "mile_time", "five_k_time", "hyrox_time"].includes(factor.id);
 
   if (isTimedEvent) {
     return (
@@ -1642,6 +1659,8 @@ export default function Page() {
   const lifestyle = getFactors([
     "income",
     "homes",
+    "cars",
+    "guns",
     "boats",
     "atvs",
     "jetskis",
@@ -3327,7 +3346,7 @@ export default function Page() {
 
           <FactorSection
             title="Athletic Performance"
-            description="Performance metrics affect Alpha Status. Enter 100m, mile, 5K and HYROX times as HH.MM.SS."
+            description="Performance metrics affect Alpha Status. Enter Dead Hang, 100m, mile, 5K and HYROX times as HH.MM.SS."
             factors={athleticPerformance}
             answers={answers}
             updateAnswer={updateAnswer}
