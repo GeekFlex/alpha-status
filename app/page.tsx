@@ -2415,7 +2415,7 @@ export default function Page() {
                 color: "#ef4444",
               }}
             >
-              PROVE IT
+              THE MEASURE OF THE MAN
             </div>
 
             <h1
@@ -2624,12 +2624,15 @@ export default function Page() {
 
                 <div
                   style={{
-                    color: "#94a3b8",
-                    fontSize: 12,
-                    marginTop: 5,
+                    color: "#d1d5db",
+                    fontSize: 18,
+                    lineHeight: 1.2,
+                    fontWeight: 850,
+                    letterSpacing: 0.2,
+                    marginTop: 7,
                   }}
                 >
-                  Shared Alpha Status rankings.
+                  Status is earned. Where do you rank?
                 </div>
               </div>
 
