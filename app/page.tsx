@@ -2834,7 +2834,7 @@ export default function Page() {
             <div className="alphaVitals">
               {[
                 ["AGE", answers.age || "—", "YRS"],
-                ["HEIGHT", formatHeightForCard(answers.height), ""],
+                ["HEIGHT", Number(answers.height || 0) > 0 ? `${Math.floor(Number(answers.height) / 12)}\'${Math.round(Number(answers.height) % 12)}\"` : "—", ""],
                 ["WEIGHT", answers.weight || "—", "LB"],
                 ["BODY FAT", answers.body_fat || "—", "%"],
               ].map(([label, value, unit]) => (
