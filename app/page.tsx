@@ -2624,7 +2624,7 @@ export default function Page() {
               <div style={{ position: "relative", height: 290, background: "#090b0d", overflow: "hidden" }}>
                 {person.photo ? <img src={person.photo} alt={person.name} style={{ width: "100%", height: "100%", objectFit: "contain", objectPosition: "center top" }} /> : <div style={{ height: "100%", display: "grid", placeItems: "center", color: "#64748b" }}>NO PHOTO</div>}
                 <div style={{ position: "absolute", inset: 0, background: "linear-gradient(0deg,#050608 0%,transparent 48%)" }} />
-                <div style={{ position: "absolute", bottom: 12, left: 14, right: 12 }}><div style={{ fontSize: 25, fontWeight: 950, fontFamily: 'Impact, "Arial Narrow", sans-serif' }}>{person.name.toUpperCase()}</div><div style={{ color: "#f87171", letterSpacing: 2, fontSize: 10, fontWeight: 900 }}>{person.level}</div></div>
+                <div style={{ position: "absolute", bottom: 12, left: 14, right: 12 }}><div style={{ fontSize: "clamp(17px, 5vw, 25px)", fontWeight: 950, fontFamily: 'Impact, "Arial Narrow", sans-serif', overflowWrap: "anywhere", lineHeight: 1.08 }}>{person.name.toUpperCase()}</div><div style={{ color: "#f87171", letterSpacing: 2, fontSize: 10, fontWeight: 900 }}>{person.level}</div></div>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 16px", borderTop: "2px solid #991b1b" }}><div><div style={{ fontSize: 9, letterSpacing: 2, color: "#9ca3af", fontWeight: 900 }}>ALPHA SCORE</div><div style={{ fontSize: 37, fontFamily: 'Impact, "Arial Narrow", sans-serif', lineHeight: 1 }}>{person.score}<span style={{ fontSize: 11, color: "#9ca3af" }}> /1000</span></div></div><div style={{ fontSize: 11, fontWeight: 900, color: "#ef4444" }}>VIEW PROFILE →</div></div>
             </button>)}
@@ -2667,20 +2667,20 @@ export default function Page() {
                 <div style={{ padding: "12px 0 50px" }}>
                   <div style={{ maxWidth: 1080, margin: "18px auto", background: "linear-gradient(145deg,#111417,#06080a 58%,#160606)", border: "1px solid rgba(255,255,255,.14)", boxShadow: "0 30px 90px rgba(0,0,0,.65)" }}>
                     <div style={{ height: 3, background: "linear-gradient(90deg,#7f1d1d,#ef4444 48%,transparent)" }} />
-                    <div style={{ padding: "20px 22px 28px" }}>
+                    <div style={{ padding: "20px clamp(12px,3vw,22px) 28px" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", marginBottom: 22 }}>
                         <div style={{ color: "#ef4444", fontSize: 10, fontWeight: 950, letterSpacing: 4 }}>MEMBER PROFILE</div>
                         <button style={darkButton} onClick={closeMember}>← Back to {memberReturnView === "alphas" ? "Alphas" : "Leaderboard"}</button>
                       </div>
 
-                      <div style={{ display: "grid", gridTemplateColumns: "minmax(150px,210px) 1fr", gap: 24, alignItems: "center" }}>
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%,210px),1fr))", gap: 24, alignItems: "center" }}>
                         <div style={{ aspectRatio: "1 / 1", overflow: "hidden", background: "#020304", borderLeft: "3px solid #b91c1c" }}>
                           {person.photo ? <img src={person.photo} alt={person.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ height: "100%", display: "grid", placeItems: "center", color: "#64748b", fontSize: 10 }}>NO PHOTO</div>}
                         </div>
                         <div>
-                          <div style={{ fontFamily: 'Impact, "Arial Narrow", sans-serif', fontSize: "clamp(32px,6vw,56px)", lineHeight: .95, letterSpacing: .5 }}>{person.name.toUpperCase()}</div>
+                          <div style={{ fontFamily: 'Impact, "Arial Narrow", sans-serif', fontSize: "clamp(27px,6vw,56px)", lineHeight: 1.05, letterSpacing: .5, overflowWrap: "anywhere", minWidth: 0 }}>{person.name.toUpperCase()}</div>
                           <div style={{ color: "#ef4444", fontSize: 11, fontWeight: 950, letterSpacing: 3, marginTop: 8 }}>{person.level}</div>
-                          <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginTop: 14 }}><span style={{ fontFamily: 'Impact, "Arial Narrow", sans-serif', fontSize: 64, lineHeight: .8 }}>{person.score}</span><span style={{ color: "#7d8791", fontWeight: 900 }}>/1000 ALPHA SCORE</span></div>
+                          <div style={{ display: "flex", alignItems: "baseline", flexWrap: "wrap", gap: 8, marginTop: 14, minWidth: 0 }}><span style={{ fontFamily: 'Impact, "Arial Narrow", sans-serif', fontSize: "clamp(42px,11vw,64px)", lineHeight: 1 }}>{person.score}</span><span style={{ color: "#7d8791", fontWeight: 900, fontSize: "clamp(11px,3vw,15px)", overflowWrap: "anywhere" }}>/1000 ALPHA SCORE</span></div>
                         </div>
                       </div>
 
