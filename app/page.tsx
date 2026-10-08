@@ -1371,9 +1371,35 @@ export default function Page() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loginMode, setLoginMode] = useState(true);
-  const [view, setView] = useState<"profile" | "leaderboard" | "admin">("profile");
+  const [view, setView] = useState<"profile" | "leaderboard" | "alphas" | "member" | "admin">("profile");
   const [selectedLeaderboardEmail, setSelectedLeaderboardEmail] = useState<string | null>(null);
   const [memberSearch, setMemberSearch] = useState("");
+  const [memberReturnView, setMemberReturnView] = useState<"alphas" | "leaderboard">("alphas");
+  const openMember = (email: string, from: "alphas" | "leaderboard") => {
+    setMemberReturnView(from);
+    setSelectedLeaderboardEmail(email);
+    setView("member");
+    if (typeof window !== "undefined") window.location.hash = `alpha-member/${encodeURIComponent(email)}`;
+    window.scrollTo(0, 0);
+  };
+  const closeMember = () => {
+    setSelectedLeaderboardEmail(null);
+    setView(memberReturnView);
+    if (typeof window !== "undefined") window.location.hash = memberReturnView;
+  };
+
+  useEffect(() => {
+    const syncMemberHash = () => {
+      const hash = window.location.hash.slice(1);
+      if (hash.startsWith("alpha-member/")) {
+        setSelectedLeaderboardEmail(decodeURIComponent(hash.slice("alpha-member/".length)));
+        setView("member");
+      } else if (hash === "alphas") setView("alphas");
+    };
+    syncMemberHash();
+    window.addEventListener("hashchange", syncMemberHash);
+    return () => window.removeEventListener("hashchange", syncMemberHash);
+  }, []);
   const [adminUsers, setAdminUsers] = useState<any[]>([]);
   const [adminSelectedId, setAdminSelectedId] = useState("");
   const [adminSelectedProfile, setAdminSelectedProfile] = useState<any>(null);
@@ -2582,6 +2608,126 @@ export default function Page() {
     );
   }
 
+  /* ALPHAS DIRECTORY: portrait cards, searchable and scrollable */
+  if (view === "alphas") {
+    return <main style={{ minHeight: "100vh", background: "#07090b", color: "#f8fafc", position: "relative" }}>
+      <Background />
+      <div style={pageWrap}>
+        <Header email={currentEmail} view={view} setView={setView} exportCSV={exportCSV} logout={logout} isAdmin={isAdmin} onAdminOpen={() => { setView("admin"); loadAdminReviewUsers(); }} />
+        <section style={{ ...card, marginTop: 20 }}>
+          <div style={{ fontSize: 10, letterSpacing: 4, fontWeight: 900, color: "#ef4444" }}>THE MEASURE OF THE MAN</div>
+          <h2 style={{ ...sectionTitle, fontSize: 40, marginTop: 6 }}>ALPHAS</h2>
+          <p style={{ fontSize: 17, color: "#d1d5db", fontWeight: 800 }}>Every man has a status. Discover the competition.</p>
+          <input aria-label="Search Alphas" placeholder="Search members by name..." value={memberSearch} onChange={(e) => setMemberSearch(e.target.value)} style={{ width: "100%", padding: 14, margin: "16px 0 24px", border: "1px solid #4b5563", borderRadius: 8, background: "#0b0d0f", color: "white", fontSize: 16 }} />
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(min(100%,240px),1fr))", gap: 18 }}>
+            {filteredLeaderboard.map((person) => <button key={person.email} onClick={() => openMember(person.email, "alphas")} style={{ cursor: "pointer", textAlign: "left", padding: 0, border: "1px solid #4b5563", color: "#f9fafb", background: "linear-gradient(155deg,#262a2e,#080a0c 62%,#230808)", overflow: "hidden", boxShadow: "0 12px 30px rgba(0,0,0,.45)" }}>
+              <div style={{ position: "relative", height: 290, background: "#090b0d", overflow: "hidden" }}>
+                {person.photo ? <img src={person.photo} alt={person.name} style={{ width: "100%", height: "100%", objectFit: "contain", objectPosition: "center top" }} /> : <div style={{ height: "100%", display: "grid", placeItems: "center", color: "#64748b" }}>NO PHOTO</div>}
+                <div style={{ position: "absolute", inset: 0, background: "linear-gradient(0deg,#050608 0%,transparent 48%)" }} />
+                <div style={{ position: "absolute", bottom: 12, left: 14, right: 12 }}><div style={{ fontSize: 25, fontWeight: 950, fontFamily: 'Impact, "Arial Narrow", sans-serif' }}>{person.name.toUpperCase()}</div><div style={{ color: "#f87171", letterSpacing: 2, fontSize: 10, fontWeight: 900 }}>{person.level}</div></div>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 16px", borderTop: "2px solid #991b1b" }}><div><div style={{ fontSize: 9, letterSpacing: 2, color: "#9ca3af", fontWeight: 900 }}>ALPHA SCORE</div><div style={{ fontSize: 37, fontFamily: 'Impact, "Arial Narrow", sans-serif', lineHeight: 1 }}>{person.score}<span style={{ fontSize: 11, color: "#9ca3af" }}> /1000</span></div></div><div style={{ fontSize: 11, fontWeight: 900, color: "#ef4444" }}>VIEW PROFILE →</div></div>
+            </button>)}
+          </div>
+          {filteredLeaderboard.length === 0 && <p style={{ color: "#9ca3af" }}>No members match that search.</p>}
+        </section>
+      </div>
+    </main>;
+  }
+
+  /* DEDICATED FULL-PAGE PUBLIC MEMBER PROFILE */
+  if (view === "member") {
+    return <main style={{ minHeight: "100vh", background: "#07090b", color: "#f8fafc", position: "relative" }}>
+      <Background />
+      <div style={pageWrap}>
+        <Header email={currentEmail} view={view} setView={setView} exportCSV={exportCSV} logout={logout} isAdmin={isAdmin} onAdminOpen={() => { setView("admin"); loadAdminReviewUsers(); }} />
+            {selectedLeaderboardEmail && (() => {
+              const person = leaderboard.find((entry) => entry.email === selectedLeaderboardEmail);
+              if (!person) return null;
+              const publicAnswers = person.answers || {};
+              const activitiesMap = publicAnswers.activities && typeof publicAnswers.activities === "object" ? publicAnswers.activities : {};
+              const publicActivityCount = Object.values(activitiesMap).filter(Boolean).length;
+              const achievements = getAchievements(publicAnswers);
+              const bodyStats = [
+                ["Chest", "chest_size", "in"], ["Biceps (Flexed)", "biceps_flexed", "in"],
+                ["Biceps (Relaxed)", "biceps_relaxed", "in"], ["Forearms", "forearms", "in"],
+                ["Shoulders", "shoulder_size", "in"], ["Waist", "waist", "in"],
+                ["Glutes", "glutes", "in"], ["Quads", "quad_size", "in"],
+                ["Calves", "calves", "in"], ["Neck", "neck", "in"],
+              ];
+              const heightInches = Number(publicAnswers.height) || 0;
+              const heightLabel = heightInches ? `${Math.floor(heightInches / 12)}'${heightInches % 12}\"` : "—";
+              const metric = (label: string, value: any) => (
+                <div key={label} style={{ padding: 12, background: "rgba(2,6,23,.62)", borderTop: "1px solid rgba(255,255,255,.10)" }}>
+                  <div style={{ color: "#8f98a3", fontSize: 9, fontWeight: 900, letterSpacing: 1.4 }}>{label.toUpperCase()}</div>
+                  <div style={{ fontSize: 19, fontWeight: 950, marginTop: 4 }}>{value}</div>
+                </div>
+              );
+              return (
+                <div style={{ padding: "12px 0 50px" }}>
+                  <div style={{ maxWidth: 1080, margin: "18px auto", background: "linear-gradient(145deg,#111417,#06080a 58%,#160606)", border: "1px solid rgba(255,255,255,.14)", boxShadow: "0 30px 90px rgba(0,0,0,.65)" }}>
+                    <div style={{ height: 3, background: "linear-gradient(90deg,#7f1d1d,#ef4444 48%,transparent)" }} />
+                    <div style={{ padding: "20px 22px 28px" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", marginBottom: 22 }}>
+                        <div style={{ color: "#ef4444", fontSize: 10, fontWeight: 950, letterSpacing: 4 }}>MEMBER PROFILE</div>
+                        <button style={darkButton} onClick={closeMember}>← Back to {memberReturnView === "alphas" ? "Alphas" : "Leaderboard"}</button>
+                      </div>
+
+                      <div style={{ display: "grid", gridTemplateColumns: "minmax(150px,210px) 1fr", gap: 24, alignItems: "center" }}>
+                        <div style={{ aspectRatio: "1 / 1", overflow: "hidden", background: "#020304", borderLeft: "3px solid #b91c1c" }}>
+                          {person.photo ? <img src={person.photo} alt={person.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ height: "100%", display: "grid", placeItems: "center", color: "#64748b", fontSize: 10 }}>NO PHOTO</div>}
+                        </div>
+                        <div>
+                          <div style={{ fontFamily: 'Impact, "Arial Narrow", sans-serif', fontSize: "clamp(32px,6vw,56px)", lineHeight: .95, letterSpacing: .5 }}>{person.name.toUpperCase()}</div>
+                          <div style={{ color: "#ef4444", fontSize: 11, fontWeight: 950, letterSpacing: 3, marginTop: 8 }}>{person.level}</div>
+                          <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginTop: 14 }}><span style={{ fontFamily: 'Impact, "Arial Narrow", sans-serif', fontSize: 64, lineHeight: .8 }}>{person.score}</span><span style={{ color: "#7d8791", fontWeight: 900 }}>/1000 ALPHA SCORE</span></div>
+                        </div>
+                      </div>
+
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(115px,1fr))", gap: 1, marginTop: 24, background: "rgba(255,255,255,.08)" }}>
+                        {metric("Age", publicAnswers.age || "—")}
+                        {metric("Height", heightLabel)}
+                        {metric("Weight", publicAnswers.weight ? `${publicAnswers.weight} lb` : "—")}
+                        {metric("Body Fat", publicAnswers.body_fat ? `${publicAnswers.body_fat}%` : "—")}
+                      </div>
+
+                      <div style={{ marginTop: 26 }}>
+                        <div style={{ color: "#ef4444", fontSize: 10, fontWeight: 950, letterSpacing: 3, marginBottom: 8 }}>STRENGTH & STATUS</div>
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(125px,1fr))", gap: 1, background: "rgba(255,255,255,.08)" }}>
+                          {metric("Bench", publicAnswers.max_bench ? `${publicAnswers.max_bench} lb` : "—")}
+                          {metric("Squat", publicAnswers.max_squat ? `${publicAnswers.max_squat} lb` : "—")}
+                          {metric("Deadlift", publicAnswers.max_deadlift ? `${publicAnswers.max_deadlift} lb` : "—")}
+                          {metric("Club Number", `${person.clubTotal} lb`)}
+                          {metric("Activities", publicActivityCount)}
+                          {metric("Achievements", achievements.length)}
+                        </div>
+                      </div>
+
+                      <div style={{ marginTop: 26 }}>
+                        <div style={{ color: "#ef4444", fontSize: 10, fontWeight: 950, letterSpacing: 3, marginBottom: 8 }}>BODY STATS</div>
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(125px,1fr))", gap: 1, background: "rgba(255,255,255,.08)" }}>
+                          {bodyStats.map(([label,id,unit]) => metric(label, publicAnswers[id] ? `${publicAnswers[id]} ${unit}` : "—"))}
+                        </div>
+                      </div>
+
+                      <div style={{ marginTop: 26 }}>
+                        <div style={{ color: "#ef4444", fontSize: 10, fontWeight: 950, letterSpacing: 3, marginBottom: 10 }}>ACHIEVEMENT BADGES</div>
+                        {achievements.length ? <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>{achievements.map((achievement) => <div key={achievement.id} title={achievement.description} style={{ minWidth: 120, padding: "11px 13px", clipPath: "polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px)", background: "linear-gradient(145deg,#252a2f,#0b0d0f)", borderLeft: "2px solid #b91c1c" }}><div style={{ fontSize: 11, fontWeight: 950 }}>{achievement.title}</div><div style={{ color: "#ef4444", fontSize: 9, fontWeight: 900, marginTop: 3 }}>+{achievement.bonus}</div></div>)}</div> : <div style={{ color: "#7d8791", fontSize: 12 }}>No achievement badges yet.</div>}
+                      </div>
+
+                      <div style={{ marginTop: 26 }}>
+                        <div style={{ color: "#ef4444", fontSize: 10, fontWeight: 950, letterSpacing: 3, marginBottom: 10 }}>BONUS ALPHA PHOTOS</div>
+                        {person.bonusPhotos?.length ? <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))", gap: 12 }}>{person.bonusPhotos.map((photo: string, index: number) => <img key={`${photo}-${index}`} src={photo} alt={`${person.name} bonus alpha ${index + 1}`} style={{ width: "100%", height: "auto", display: "block", border: "1px solid rgba(255,255,255,.12)", background: "#020304" }} />)}</div> : <div style={{ color: "#7d8791", fontSize: 12 }}>No bonus Alpha photos submitted.</div>}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+      </div>
+    </main>;
+  }
+
   /* LEADERBOARD */
 
   if (view === "leaderboard") {
@@ -2667,8 +2813,8 @@ export default function Page() {
                   key={person.email}
                   role="button"
                   tabIndex={0}
-                  onClick={() => setSelectedLeaderboardEmail(person.email)}
-                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setSelectedLeaderboardEmail(person.email); }}
+                  onClick={() => openMember(person.email, "leaderboard")}
+                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") openMember(person.email, "leaderboard"); }}
                   style={{
                     display: "flex",
                     alignItems: "center",
@@ -2767,89 +2913,7 @@ export default function Page() {
               ))}
             </div>
 
-            {selectedLeaderboardEmail && (() => {
-              const person = leaderboard.find((entry) => entry.email === selectedLeaderboardEmail);
-              if (!person) return null;
-              const publicAnswers = person.answers || {};
-              const activitiesMap = publicAnswers.activities && typeof publicAnswers.activities === "object" ? publicAnswers.activities : {};
-              const publicActivityCount = Object.values(activitiesMap).filter(Boolean).length;
-              const achievements = getAchievements(publicAnswers);
-              const bodyStats = [
-                ["Chest", "chest_size", "in"], ["Biceps (Flexed)", "biceps_flexed", "in"],
-                ["Biceps (Relaxed)", "biceps_relaxed", "in"], ["Forearms", "forearms", "in"],
-                ["Shoulders", "shoulder_size", "in"], ["Waist", "waist", "in"],
-                ["Glutes", "glutes", "in"], ["Quads", "quad_size", "in"],
-                ["Calves", "calves", "in"], ["Neck", "neck", "in"],
-              ];
-              const heightInches = Number(publicAnswers.height) || 0;
-              const heightLabel = heightInches ? `${Math.floor(heightInches / 12)}'${heightInches % 12}\"` : "—";
-              const metric = (label: string, value: any) => (
-                <div key={label} style={{ padding: 12, background: "rgba(2,6,23,.62)", borderTop: "1px solid rgba(255,255,255,.10)" }}>
-                  <div style={{ color: "#8f98a3", fontSize: 9, fontWeight: 900, letterSpacing: 1.4 }}>{label.toUpperCase()}</div>
-                  <div style={{ fontSize: 19, fontWeight: 950, marginTop: 4 }}>{value}</div>
-                </div>
-              );
-              return (
-                <div style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(0,0,0,.88)", padding: 16, overflowY: "auto" }} onClick={() => setSelectedLeaderboardEmail(null)}>
-                  <div style={{ maxWidth: 860, margin: "28px auto", background: "linear-gradient(145deg,#111417,#06080a 58%,#160606)", border: "1px solid rgba(255,255,255,.14)", boxShadow: "0 30px 90px rgba(0,0,0,.65)" }} onClick={(e) => e.stopPropagation()}>
-                    <div style={{ height: 3, background: "linear-gradient(90deg,#7f1d1d,#ef4444 48%,transparent)" }} />
-                    <div style={{ padding: "20px 22px 28px" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", marginBottom: 22 }}>
-                        <div style={{ color: "#ef4444", fontSize: 10, fontWeight: 950, letterSpacing: 4 }}>MEMBER PROFILE</div>
-                        <button style={darkButton} onClick={() => setSelectedLeaderboardEmail(null)}>Close</button>
-                      </div>
 
-                      <div style={{ display: "grid", gridTemplateColumns: "minmax(150px,210px) 1fr", gap: 24, alignItems: "center" }}>
-                        <div style={{ aspectRatio: "1 / 1", overflow: "hidden", background: "#020304", borderLeft: "3px solid #b91c1c" }}>
-                          {person.photo ? <img src={person.photo} alt={person.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ height: "100%", display: "grid", placeItems: "center", color: "#64748b", fontSize: 10 }}>NO PHOTO</div>}
-                        </div>
-                        <div>
-                          <div style={{ fontFamily: 'Impact, "Arial Narrow", sans-serif', fontSize: "clamp(32px,6vw,56px)", lineHeight: .95, letterSpacing: .5 }}>{person.name.toUpperCase()}</div>
-                          <div style={{ color: "#ef4444", fontSize: 11, fontWeight: 950, letterSpacing: 3, marginTop: 8 }}>{person.level}</div>
-                          <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginTop: 14 }}><span style={{ fontFamily: 'Impact, "Arial Narrow", sans-serif', fontSize: 64, lineHeight: .8 }}>{person.score}</span><span style={{ color: "#7d8791", fontWeight: 900 }}>/1000 ALPHA SCORE</span></div>
-                        </div>
-                      </div>
-
-                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(115px,1fr))", gap: 1, marginTop: 24, background: "rgba(255,255,255,.08)" }}>
-                        {metric("Age", publicAnswers.age || "—")}
-                        {metric("Height", heightLabel)}
-                        {metric("Weight", publicAnswers.weight ? `${publicAnswers.weight} lb` : "—")}
-                        {metric("Body Fat", publicAnswers.body_fat ? `${publicAnswers.body_fat}%` : "—")}
-                      </div>
-
-                      <div style={{ marginTop: 26 }}>
-                        <div style={{ color: "#ef4444", fontSize: 10, fontWeight: 950, letterSpacing: 3, marginBottom: 8 }}>STRENGTH & STATUS</div>
-                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(125px,1fr))", gap: 1, background: "rgba(255,255,255,.08)" }}>
-                          {metric("Bench", publicAnswers.max_bench ? `${publicAnswers.max_bench} lb` : "—")}
-                          {metric("Squat", publicAnswers.max_squat ? `${publicAnswers.max_squat} lb` : "—")}
-                          {metric("Deadlift", publicAnswers.max_deadlift ? `${publicAnswers.max_deadlift} lb` : "—")}
-                          {metric("Club Number", `${person.clubTotal} lb`)}
-                          {metric("Activities", publicActivityCount)}
-                          {metric("Achievements", achievements.length)}
-                        </div>
-                      </div>
-
-                      <div style={{ marginTop: 26 }}>
-                        <div style={{ color: "#ef4444", fontSize: 10, fontWeight: 950, letterSpacing: 3, marginBottom: 8 }}>BODY STATS</div>
-                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(125px,1fr))", gap: 1, background: "rgba(255,255,255,.08)" }}>
-                          {bodyStats.map(([label,id,unit]) => metric(label, publicAnswers[id] ? `${publicAnswers[id]} ${unit}` : "—"))}
-                        </div>
-                      </div>
-
-                      <div style={{ marginTop: 26 }}>
-                        <div style={{ color: "#ef4444", fontSize: 10, fontWeight: 950, letterSpacing: 3, marginBottom: 10 }}>ACHIEVEMENT BADGES</div>
-                        {achievements.length ? <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>{achievements.map((achievement) => <div key={achievement.id} title={achievement.description} style={{ minWidth: 120, padding: "11px 13px", clipPath: "polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px)", background: "linear-gradient(145deg,#252a2f,#0b0d0f)", borderLeft: "2px solid #b91c1c" }}><div style={{ fontSize: 11, fontWeight: 950 }}>{achievement.title}</div><div style={{ color: "#ef4444", fontSize: 9, fontWeight: 900, marginTop: 3 }}>+{achievement.bonus}</div></div>)}</div> : <div style={{ color: "#7d8791", fontSize: 12 }}>No achievement badges yet.</div>}
-                      </div>
-
-                      <div style={{ marginTop: 26 }}>
-                        <div style={{ color: "#ef4444", fontSize: 10, fontWeight: 950, letterSpacing: 3, marginBottom: 10 }}>BONUS ALPHA PHOTOS</div>
-                        {person.bonusPhotos?.length ? <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))", gap: 12 }}>{person.bonusPhotos.map((photo: string, index: number) => <img key={`${photo}-${index}`} src={photo} alt={`${person.name} bonus alpha ${index + 1}`} style={{ width: "100%", height: "auto", display: "block", border: "1px solid rgba(255,255,255,.12)", background: "#020304" }} />)}</div> : <div style={{ color: "#7d8791", fontSize: 12 }}>No bonus Alpha photos submitted.</div>}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })()}
           </section>
         </div>
       </main>
@@ -3757,8 +3821,8 @@ function Header({
   onAdminOpen,
 }: {
   email: string;
-  view: "profile" | "leaderboard" | "admin";
-  setView: (value: "profile" | "leaderboard" | "admin") => void;
+  view: "profile" | "leaderboard" | "alphas" | "member" | "admin";
+  setView: (value: "profile" | "leaderboard" | "alphas" | "member" | "admin") => void;
   exportCSV: () => void;
   logout: () => void;
   isAdmin: boolean;
@@ -3837,6 +3901,8 @@ function Header({
         >
           Leaderboard
         </button>
+
+        <button style={view === "alphas" ? primaryButton : lightButton} onClick={() => setView("alphas")}>Alphas</button>
 
         {isAdmin && (
           <button style={view === "admin" ? primaryButton : lightButton} onClick={onAdminOpen}>
